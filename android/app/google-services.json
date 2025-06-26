@@ -1,0 +1,118 @@
+{
+  "project_info": {
+    "project_number": "851461920948",
+    "project_id": "minimalchat-cca3f",
+    "storage_bucket": "minimalchat-cca3f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:851461920948:android:87d1cf4f0ff1dd2bfe9fe1",
+        "android_client_info": {
+          "package_name": "com.example.digi_rupay"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "851461920948-97du3rnttnsrku1498f0qm6mgb7evr73.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA6p-Aei0l204pq64nbAgo2xK0g7tURTGI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "851461920948-97du3rnttnsrku1498f0qm6mgb7evr73.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "851461920948-oist0h81phf2000p7hbco4p4r7393jr2.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.minimalchat"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:851461920948:android:37eae738d67e578ffe9fe1",
+        "android_client_info": {
+          "package_name": "com.example.ledgerly"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "851461920948-97du3rnttnsrku1498f0qm6mgb7evr73.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA6p-Aei0l204pq64nbAgo2xK0g7tURTGI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "851461920948-97du3rnttnsrku1498f0qm6mgb7evr73.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "851461920948-oist0h81phf2000p7hbco4p4r7393jr2.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.minimalchat"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:851461920948:android:740290e8c1f47163fe9fe1",
+        "android_client_info": {
+          "package_name": "com.example.minimalchat"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "851461920948-97du3rnttnsrku1498f0qm6mgb7evr73.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA6p-Aei0l204pq64nbAgo2xK0g7tURTGI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "851461920948-97du3rnttnsrku1498f0qm6mgb7evr73.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "851461920948-oist0h81phf2000p7hbco4p4r7393jr2.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.minimalchat"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
