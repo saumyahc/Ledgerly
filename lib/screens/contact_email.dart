@@ -1,7 +1,7 @@
-// auth_input_page.dart
+// auth_input_page.dart (Mobile App)
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'otp_verification_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthInputPage extends StatefulWidget {
   @override
@@ -14,11 +14,6 @@ class _AuthInputPageState extends State<AuthInputPage> {
 
   bool _isEmail(String input) {
     return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(input);
-  }
-
-  bool _isPhoneNumber(String input) {
-    // Enhanced phone number validation with country code
-    return RegExp(r'^\+\d{1,3}\d{10,14}$').hasMatch(input);
   }
 
   void _showErrorDialog(String message) {
@@ -59,12 +54,10 @@ class _AuthInputPageState extends State<AuthInputPage> {
       backgroundColor: Colors.grey[50],
       body: SafeArea(
         child: SingleChildScrollView(
-          // FIX: Prevent overflow
           padding: EdgeInsets.all(24.0),
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              minHeight:
-                  MediaQuery.of(context).size.height -
+              minHeight: MediaQuery.of(context).size.height -
                   MediaQuery.of(context).padding.top -
                   MediaQuery.of(context).padding.bottom,
             ),
@@ -72,7 +65,7 @@ class _AuthInputPageState extends State<AuthInputPage> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Icon(Icons.lock_outline, size: 80, color: Colors.blue),
+                Icon(Icons.email_outlined, size: 80, color: Colors.blue),
                 SizedBox(height: 32),
                 Text(
                   'Welcome Back',
@@ -85,7 +78,7 @@ class _AuthInputPageState extends State<AuthInputPage> {
                 ),
                 SizedBox(height: 8),
                 Text(
-                  'Enter your email or phone number to continue',
+                  'Enter your email address to continue',
                   style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                   textAlign: TextAlign.center,
                 ),
@@ -94,21 +87,17 @@ class _AuthInputPageState extends State<AuthInputPage> {
                   controller: _controller,
                   keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
-                    labelText: 'Email or Phone Number',
-                    hintText: 'Enter email or +1234567890',
-                    prefixIcon: Icon(Icons.person_outline),
+                    labelText: 'Email Address',
+                    hintText: 'Enter your email',
+                    prefixIcon: Icon(Icons.email_outlined),
                     suffixIcon: _controller.text.isNotEmpty
                         ? Icon(
                             _isEmail(_controller.text)
-                                ? Icons.email_outlined
-                                : _isPhoneNumber(_controller.text)
-                                ? Icons.phone_outlined
-                                : Icons.help_outline,
-                            color:
-                                _isEmail(_controller.text) ||
-                                    _isPhoneNumber(_controller.text)
+                                ? Icons.check_circle_outline
+                                : Icons.error_outline,
+                            color: _isEmail(_controller.text)
                                 ? Colors.green
-                                : Colors.grey,
+                                : Colors.red,
                           )
                         : null,
                     border: OutlineInputBorder(
@@ -118,15 +107,14 @@ class _AuthInputPageState extends State<AuthInputPage> {
                     fillColor: Colors.white,
                   ),
                   onChanged: (value) {
-                    setState(() {}); // Refresh to show the suffix icon
+                    setState(() {});
                   },
                 ),
                 SizedBox(height: 24),
                 SizedBox(
-                  // FIX: Constrain button height
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : _handleSubmit,
+                    onPressed: _isLoading ? null : _handleEmailSubmit,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
                       foregroundColor: Colors.white,
@@ -144,7 +132,7 @@ class _AuthInputPageState extends State<AuthInputPage> {
                             ),
                           )
                         : Text(
-                            'Continue',
+                            'Send Verification Email',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -153,13 +141,6 @@ class _AuthInputPageState extends State<AuthInputPage> {
                   ),
                 ),
                 SizedBox(height: 24),
-                Text(
-                  'We\'ll automatically detect if it\'s an email or phone number',
-                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 16),
-                // FIX: Add instructions for phone format
                 Container(
                   padding: EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -167,7 +148,7 @@ class _AuthInputPageState extends State<AuthInputPage> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    'For phone numbers, please include country code (e.g., +1 for US, +91 for India)',
+                    'We\'ll send you a verification link to your email. Click the link to complete authentication.',
                     style: TextStyle(fontSize: 12, color: Colors.blue[700]),
                     textAlign: TextAlign.center,
                   ),
@@ -180,120 +161,63 @@ class _AuthInputPageState extends State<AuthInputPage> {
     );
   }
 
-  Future<void> _handleSubmit() async {
-    final input = _controller.text.trim();
+  Future<void> _handleEmailSubmit() async {
+    final email = _controller.text.trim();
 
-    if (input.isEmpty) {
-      _showErrorDialog('Please enter an email or phone number.');
+    if (email.isEmpty) {
+      _showErrorDialog('Please enter an email address.');
       return;
     }
 
-    if (_isEmail(input)) {
-      await _handleEmailSignIn(input);
-    } else if (_isPhoneNumber(input)) {
-      await _handlePhoneSignIn(input);
-    } else {
-      _showErrorDialog(
-        'Please enter a valid email or phone number with country code (e.g., +1234567890).',
-      );
+    if (!_isEmail(email)) {
+      _showErrorDialog('Please enter a valid email address.');
+      return;
     }
-  }
 
-  Future<void> _handleEmailSignIn(String email) async {
     setState(() => _isLoading = true);
 
     try {
-      // FIX: Use createUserWithEmailAndPassword or signInWithEmailAndPassword instead
-      // Since email link sign-in requires additional setup
+      // Store email for later use
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('pending_email', email);
 
-      // For now, let's try a simple email/password approach
-      // You can modify this based on your requirements
+      // Configure action code settings for email link
+      final actionCodeSettings = ActionCodeSettings(
+        // This should point to your Flutter web app
+        url: 'https://your-flutter-web-domain.com/#/auth-verify?email=$email',
+        handleCodeInApp: false,
+        iOSBundleId: 'com.yourapp.bundleid',
+        androidPackageName: 'com.yourapp.packagename',
+        androidInstallApp: true,
+        androidMinimumVersion: '1',
+      );
 
-      // Option 1: Create account (if new user)
-      try {
-        UserCredential userCredential = await FirebaseAuth.instance
-            .createUserWithEmailAndPassword(email: email, password: 'temp123');
+      await FirebaseAuth.instance.sendSignInLinkToEmail(
+        email: email,
+        actionCodeSettings: actionCodeSettings,
+      );
 
-        _showSuccessDialog(
-          'Account Created',
-          'Welcome! Your account has been created.',
-        );
-      } on FirebaseAuthException catch (e) {
-        if (e.code == 'email-already-in-use') {
-          // Option 2: Try to send password reset (if existing user)
-          await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
-          _showSuccessDialog(
-            'Password Reset',
-            'A password reset link has been sent to your email.',
-          );
-        } else {
-          throw e;
-        }
+      setState(() => _isLoading = false);
+
+      _showSuccessDialog(
+        'Verification Email Sent',
+        'Please check your email and click the verification link to continue.',
+      );
+    } catch (e) {
+      setState(() => _isLoading = false);
+      _showErrorDialog('Failed to send verification email: ${e.toString()}');
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Listen for auth state changes
+    FirebaseAuth.instance.authStateChanges().listen((User? user) {
+      if (user != null && mounted) {
+        // User is signed in, navigate to wallet page
+        Navigator.pushReplacementNamed(context, '/wallet');
       }
-    } catch (e) {
-      _showErrorDialog('Email authentication error: ${e.toString()}');
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _handlePhoneSignIn(String phoneNumber) async {
-    setState(() => _isLoading = true);
-
-    try {
-      await FirebaseAuth.instance.verifyPhoneNumber(
-        phoneNumber: phoneNumber,
-        verificationCompleted: (PhoneAuthCredential credential) async {
-          // Auto-verification completed
-          try {
-            await FirebaseAuth.instance.signInWithCredential(credential);
-            setState(() => _isLoading = false);
-            _showSuccessDialog(
-              'Success',
-              'Phone number verified automatically!',
-            );
-          } catch (e) {
-            setState(() => _isLoading = false);
-            _showErrorDialog('Auto-verification failed: ${e.toString()}');
-          }
-        },
-        verificationFailed: (FirebaseAuthException e) {
-          setState(() => _isLoading = false);
-          String errorMessage = 'Phone verification failed.';
-
-          if (e.code == 'billing-not-enabled') {
-            errorMessage =
-                'Phone authentication requires billing to be enabled in Firebase Console.';
-          } else if (e.code == 'invalid-phone-number') {
-            errorMessage =
-                'Invalid phone number format. Please include country code.';
-          } else if (e.code == 'too-many-requests') {
-            errorMessage = 'Too many requests. Please try again later.';
-          }
-
-          _showErrorDialog(errorMessage);
-        },
-        codeSent: (String verificationId, int? resendToken) {
-          setState(() => _isLoading = false);
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => OtpVerificationPage(
-                verificationId: verificationId,
-                phoneNumber: phoneNumber,
-                resendToken: resendToken,
-              ),
-            ),
-          );
-        },
-        codeAutoRetrievalTimeout: (String verificationId) {
-          setState(() => _isLoading = false);
-        },
-        timeout: Duration(seconds: 60), // FIX: Add timeout
-      );
-    } catch (e) {
-      setState(() => _isLoading = false);
-      _showErrorDialog('Phone verification setup failed: ${e.toString()}');
-    }
+    });
   }
 }
