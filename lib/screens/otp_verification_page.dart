@@ -1,31 +1,31 @@
-// otp_verification_page.dart 
+// otp_verification_page.dart
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'dart:async';
+import 'package:http/http.dart' as http;
+import 'home_page.dart';
 
-class OtpVerificationPage extends StatefulWidget {
-  final String verificationId;
-  final String phoneNumber;
-  final int? resendToken;
+class OTPVerificationPage extends StatefulWidget {
+  final String email;
+  final bool isSignUp;
+  final Map<String, dynamic>? userData;
 
-  OtpVerificationPage({
-    required this.verificationId,
-    required this.phoneNumber,
-    this.resendToken,
+  const OTPVerificationPage({
+    super.key,
+    required this.email,
+    required this.isSignUp,
+    this.userData,
   });
 
   @override
-  _OtpVerificationPageState createState() => _OtpVerificationPageState();
+  _OTPVerificationPageState createState() => _OTPVerificationPageState();
 }
 
-class _OtpVerificationPageState extends State<OtpVerificationPage> {
-  final List<TextEditingController> _controllers = List.generate(6, (index) => TextEditingController());
-  final List<FocusNode> _focusNodes = List.generate(6, (index) => FocusNode());
+class _OTPVerificationPageState extends State<OTPVerificationPage> {
+  final TextEditingController _otpController = TextEditingController();
   bool _isLoading = false;
-  bool _canResend = false;
-  int _resendTimer = 30;
-  Timer? _timer;
+  bool _isResending = false;
+  int _resendTimer = 0;
+  bool _canResend = true;
 
   @override
   void initState() {
@@ -35,151 +35,22 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
 
   void _startResendTimer() {
     setState(() {
+      _resendTimer = 60;
       _canResend = false;
-      _resendTimer = 30;
     });
-    
-    _timer?.cancel();
-    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
-      setState(() {
-        _resendTimer--;
-      });
-      
-      if (_resendTimer == 0) {
+
+    Future.delayed(Duration(seconds: 1), () {
+      if (mounted && _resendTimer > 0) {
+        setState(() {
+          _resendTimer--;
+        });
+        _startResendTimer();
+      } else if (mounted) {
         setState(() {
           _canResend = true;
         });
-        timer.cancel();
       }
     });
-  }
-
-  Future<void> _verifyOTP() async {
-    final otp = _controllers.map((controller) => controller.text).join();
-    
-    if (otp.length != 6) {
-      _showErrorDialog('Please enter all 6 digits');
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final credential = PhoneAuthProvider.credential(
-        verificationId: widget.verificationId,
-        smsCode: otp,
-      );
-      
-      UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
-      
-      // Success - navigate to next screen or show success
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Phone number verified successfully!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      
-      // Navigate back to main screen or dashboard
-      Navigator.of(context).popUntil((route) => route.isFirst);
-      
-    } catch (e) {
-      String errorMessage = 'Invalid OTP. Please try again.';
-      
-      if (e is FirebaseAuthException) {
-        switch (e.code) {
-          case 'invalid-verification-code':
-            errorMessage = 'Invalid verification code. Please check and try again.';
-            break;
-          case 'code-expired':
-            errorMessage = 'Verification code has expired. Please request a new one.';
-            break;
-          case 'too-many-requests':
-            errorMessage = 'Too many attempts. Please try again later.';
-            break;
-        }
-      }
-      
-      _showErrorDialog(errorMessage);
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _resendOTP() async {
-    if (!_canResend) return;
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      await FirebaseAuth.instance.verifyPhoneNumber(
-        phoneNumber: widget.phoneNumber,
-        forceResendingToken: widget.resendToken,
-        verificationCompleted: (PhoneAuthCredential credential) async {
-          try {
-            await FirebaseAuth.instance.signInWithCredential(credential);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Phone verified automatically!')),
-            );
-            Navigator.of(context).popUntil((route) => route.isFirst);
-          } catch (e) {
-            _showErrorDialog('Auto-verification failed: ${e.toString()}');
-          }
-        },
-        verificationFailed: (FirebaseAuthException e) {
-          String errorMessage = 'Failed to resend OTP.';
-          
-          if (e.code == 'billing-not-enabled') {
-            errorMessage = 'SMS service requires billing to be enabled in Firebase Console.';
-          } else if (e.code == 'too-many-requests') {
-            errorMessage = 'Too many requests. Please try again later.';
-          }
-          
-          _showErrorDialog(errorMessage);
-        },
-        codeSent: (String verificationId, int? resendToken) {
-          // Update verification ID for the new code
-          setState(() {
-            // You might want to update the verification ID here
-          });
-          
-          _startResendTimer();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('OTP sent again!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        },
-        codeAutoRetrievalTimeout: (String verificationId) {},
-        timeout: Duration(seconds: 60),
-      );
-    } catch (e) {
-      _showErrorDialog('Failed to resend OTP: ${e.toString()}');
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  void _onOtpChanged(String value, int index) {
-    if (value.length == 1 && index < 5) {
-      _focusNodes[index + 1].requestFocus();
-    } else if (value.isEmpty && index > 0) {
-      _focusNodes[index - 1].requestFocus();
-    }
-    
-    // Auto-verify when all fields are filled
-    if (_controllers.every((controller) => controller.text.isNotEmpty)) {
-      _verifyOTP();
-    }
   }
 
   void _showErrorDialog(String message) {
@@ -198,6 +69,117 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
     );
   }
 
+  void _showSuccessDialog(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // Navigate to home page after successful verification
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => HomePage()),
+                (route) => false,
+              );
+            },
+            child: Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleVerifyOTP() async {
+    final otp = _otpController.text.trim();
+    if (otp.isEmpty) {
+      _showErrorDialog('Please enter the OTP.');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      String endpoint = widget.isSignUp
+          ? 'http://localhost/Ledgerly/Ledgerly/backend_example/verify_signup_otp.php'
+          : 'http://localhost/Ledgerly/Ledgerly/backend_example/verify_otp.php';
+
+      Map<String, String> body = {'email': widget.email, 'otp': otp};
+
+      // Add user data for sign-up verification
+      if (widget.isSignUp && widget.userData != null) {
+        body.addAll(
+          widget.userData!.map((key, value) => MapEntry(key, value.toString())),
+        );
+      }
+
+      final response = await http.post(Uri.parse(endpoint), body: body);
+
+      final data = jsonDecode(response.body);
+
+      if (data['success']) {
+        setState(() => _isLoading = false);
+        _showSuccessDialog(
+          'Success',
+          widget.isSignUp
+              ? 'Account created successfully! Welcome to Ledgerly.'
+              : 'Email verified successfully!',
+        );
+      } else {
+        setState(() => _isLoading = false);
+        _showErrorDialog(data['message'] ?? 'OTP verification failed');
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      _showErrorDialog('Failed to verify OTP: $e');
+    }
+  }
+
+  Future<void> _handleResendOTP() async {
+    if (!_canResend) return;
+
+    setState(() => _isResending = true);
+
+    try {
+      String endpoint = widget.isSignUp
+          ? 'http://localhost/Ledgerly/Ledgerly/backend_example/signup.php'
+          : 'http://localhost/Ledgerly/Ledgerly/backend_example/send_otp.php';
+
+      Map<String, String> body = {'email': widget.email};
+
+      // Add user data for sign-up resend
+      if (widget.isSignUp && widget.userData != null) {
+        body.addAll(
+          widget.userData!.map((key, value) => MapEntry(key, value.toString())),
+        );
+      }
+
+      final response = await http.post(Uri.parse(endpoint), body: body);
+
+      final data = jsonDecode(response.body);
+
+      if (data['success']) {
+        setState(() => _isResending = false);
+        _startResendTimer();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('OTP sent successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        setState(() => _isResending = false);
+        _showErrorDialog(data['message'] ?? 'Failed to resend OTP');
+      }
+    } catch (e) {
+      setState(() => _isResending = false);
+      _showErrorDialog('Failed to resend OTP: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -211,164 +193,139 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView( // FIX: Prevent overflow
+        child: SingleChildScrollView(
           padding: EdgeInsets.all(24.0),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight: MediaQuery.of(context).size.height - 
-                       MediaQuery.of(context).padding.top - 
-                       kToolbarHeight - 48,
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Icon(
-                  Icons.message_outlined,
-                  size: 80,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Icon(Icons.verified_outlined, size: 80, color: Colors.blue),
+              SizedBox(height: 24),
+              Text(
+                'Verify Your Email',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[800],
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 8),
+              Text(
+                'We\'ve sent a verification code to',
+                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 4),
+              Text(
+                widget.email,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
                   color: Colors.blue,
                 ),
-                SizedBox(height: 32),
-                Text(
-                  'Enter OTP',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[800],
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 32),
+
+              // OTP Input
+              TextField(
+                controller: _otpController,
+                keyboardType: TextInputType.number,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                decoration: InputDecoration(
+                  labelText: 'Enter OTP',
+                  hintText: '000000',
+                  prefixIcon: Icon(Icons.lock_outline),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  textAlign: TextAlign.center,
+                  filled: true,
+                  fillColor: Colors.white,
                 ),
-                SizedBox(height: 16),
-                Text(
-                  'We\'ve sent a 6-digit code to',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey[600],
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 8),
-                Text(
-                  widget.phoneNumber,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.blue,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 48),
-                // FIX: Improved OTP input layout
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: List.generate(6, (index) {
-                    return Container(
-                      width: 45,
-                      height: 55,
-                      child: TextField(
-                        controller: _controllers[index],
-                        focusNode: _focusNodes[index],
-                        keyboardType: TextInputType.number,
-                        textAlign: TextAlign.center,
-                        maxLength: 1,
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        decoration: InputDecoration(
-                          counterText: '',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.grey[300]!),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.blue, width: 2),
-                          ),
-                          filled: true,
-                          fillColor: Colors.white,
-                          contentPadding: EdgeInsets.symmetric(vertical: 15),
-                        ),
-                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                        onChanged: (value) => _onOtpChanged(value, index),
-                      ),
-                    );
-                  }),
-                ),
-                SizedBox(height: 32),
-                SizedBox( // FIX: Constrain button height
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _verifyOTP,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+              ),
+              SizedBox(height: 24),
+
+              // Verify Button
+              SizedBox(
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _handleVerifyOTP,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child: _isLoading
-                        ? SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : Text(
-                            'Verify OTP',
-                            style: TextStyle(
-                              fontSize: 16, 
-                              fontWeight: FontWeight.w600
-                            ),
-                          ),
                   ),
+                  child: _isLoading
+                      ? SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Text(
+                          'Verify OTP',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                 ),
-                SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
+              ),
+              SizedBox(height: 24),
+
+              // Resend OTP Section
+              Column(
+                children: [
+                  Text(
+                    'Didn\'t receive the code?',
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                  SizedBox(height: 8),
+                  if (_canResend)
+                    TextButton(
+                      onPressed: _isResending ? null : _handleResendOTP,
+                      child: _isResending
+                          ? SizedBox(
+                              height: 16,
+                              width: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Text(
+                              'Resend OTP',
+                              style: TextStyle(
+                                color: Colors.blue,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                    )
+                  else
                     Text(
-                      'Didn\'t receive the code? ',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
+                      'Resend OTP in $_resendTimer seconds',
+                      style: TextStyle(color: Colors.grey[500], fontSize: 12),
                     ),
-                    GestureDetector(
-                      onTap: _canResend ? _resendOTP : null,
-                      child: Text(
-                        _canResend ? 'Resend' : 'Resend in ${_resendTimer}s',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: _canResend ? Colors.blue : Colors.grey[400],
-                          fontWeight: FontWeight.w600,
-                          decoration: _canResend ? TextDecoration.underline : null,
-                        ),
-                      ),
-                    ),
-                  ],
+                ],
+              ),
+              SizedBox(height: 24),
+
+              // Info Box
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                SizedBox(height: 24),
-                // FIX: Add clear button
-                TextButton(
-                  onPressed: () {
-                    for (var controller in _controllers) {
-                      controller.clear();
-                    }
-                    _focusNodes[0].requestFocus();
-                  },
-                  child: Text(
-                    'Clear OTP',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 14,
-                    ),
-                  ),
+                child: Text(
+                  'Enter the 6-digit code sent to your email address. The code will expire in 10 minutes.',
+                  style: TextStyle(fontSize: 12, color: Colors.blue[700]),
+                  textAlign: TextAlign.center,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -377,13 +334,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
 
   @override
   void dispose() {
-    _timer?.cancel();
-    for (var controller in _controllers) {
-      controller.dispose();
-    }
-    for (var focusNode in _focusNodes) {
-      focusNode.dispose();
-    }
+    _otpController.dispose();
     super.dispose();
   }
 }

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:ledgerly/screens/contact_email.dart';
+import 'package:ledgerly/screens/email_verification.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({Key? key}) : super(key: key);
+  const SplashScreen({super.key});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -199,7 +199,7 @@ class _SplashScreenState extends State<SplashScreen>
                   // Loading indicator
                   FadeTransition(
                     opacity: _fadeAnimation,
-                    child: Container(
+                    child: SizedBox(
                       width: 40,
                       height: 40,
                       child: const CircularProgressIndicator(
@@ -271,7 +271,7 @@ class _SplashScreenState extends State<SplashScreen>
 
 // Placeholder for your existing page - replace with your actual implementation
 class NameOrContactPage extends StatelessWidget {
-  const NameOrContactPage({Key? key}) : super(key: key);
+  const NameOrContactPage({super.key});
 
   @override
   Widget build(BuildContext context) {
