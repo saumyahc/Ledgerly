@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../theme.dart';
 
 class AuthInputPage extends StatefulWidget {
   @override
@@ -219,5 +220,83 @@ class _AuthInputPageState extends State<AuthInputPage> {
         Navigator.pushReplacementNamed(context, '/wallet');
       }
     });
+  }
+}
+
+class ContactEmailPage extends StatelessWidget {
+  const ContactEmailPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBackground(
+      child: TouchEffectOverlay(
+        child: Scaffold(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          appBar: AppBar(
+            title: Text('Contact Us', style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white)),
+            backgroundColor: AppColors.primary,
+            elevation: 0,
+          ),
+          body: Center(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32),
+                child: Glass3DCard(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Icon(Icons.email, size: 64, color: AppColors.primary),
+                      const SizedBox(height: 24),
+                      Text(
+                        'Contact Support',
+                        style: Theme.of(context).textTheme.displayLarge?.copyWith(fontSize: 26, color: AppColors.primary, fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Send us your query or feedback and we’ll get back to you soon!',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.black54),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 24),
+                      TextField(
+                        decoration: InputDecoration(
+                          prefixIcon: Icon(Icons.person, color: AppColors.primary),
+                          labelText: 'Your Name',
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        decoration: InputDecoration(
+                          prefixIcon: Icon(Icons.email, color: AppColors.primary),
+                          labelText: 'Your Email',
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        maxLines: 4,
+                        decoration: InputDecoration(
+                          prefixIcon: Icon(Icons.message, color: AppColors.primary),
+                          labelText: 'Message',
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: Neumorphic3DButton(
+                          child: Text('Send', style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppColors.primary)),
+                          onTap: () {},
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
