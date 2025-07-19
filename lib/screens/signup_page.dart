@@ -311,6 +311,7 @@ class _SignUpPageState extends State<SignUpPage> {
                         const SizedBox(height: 24),
                         SizedBox(
                           width: double.infinity,
+                          height: 56,
                           child: Neumorphic3DButton(
                             child: Text('Sign Up', style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppColors.primary)),
                             onTap: _isLoading ? () {} : () => _handleSignUp(),

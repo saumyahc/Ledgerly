@@ -284,6 +284,7 @@ class ContactEmailPage extends StatelessWidget {
                       const SizedBox(height: 24),
                       SizedBox(
                         width: double.infinity,
+                        height: 56,
                         child: Neumorphic3DButton(
                           child: Text('Send', style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppColors.primary)),
                           onTap: () {},

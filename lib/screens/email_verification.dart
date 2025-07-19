@@ -105,6 +105,7 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
                       const SizedBox(height: 24),
                       SizedBox(
                         width: double.infinity,
+                        height: 56,
                         child: Neumorphic3DButton(
                           child: _isLoading
                               ? SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))

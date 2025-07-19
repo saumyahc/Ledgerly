@@ -43,6 +43,7 @@ class OTPVerificationPage extends StatelessWidget {
                       const SizedBox(height: 24),
                       SizedBox(
                         width: double.infinity,
+                        height: 56,
                         child: Neumorphic3DButton(
                           child: Text('Verify', style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppColors.primary)),
                           onTap: () {},
