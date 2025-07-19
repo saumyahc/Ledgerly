@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:ledgerly/theme.dart';
 
 class AccountInfoPage extends StatefulWidget {
   @override
@@ -125,108 +126,110 @@ class _AccountInfoPageState extends State<AccountInfoPage> {
                                 key: _formKey,
                                 child: ListView(
                                   children: [
-                                                        _buildEditableField(
-                          icon: Icons.person,
-                          label: 'First Name',
-                          initialValue: firstName,
-                          onChanged: (val) => setState(() => firstName = val),
-                          gradientIcon: true,
-                          errorMessage: _firstNameError,
-                        ),
-                        _buildEditableField(
-                          icon: Icons.person_outline,
-                          label: 'Last Name',
-                          initialValue: lastName,
-                          onChanged: (val) => setState(() => lastName = val),
-                          gradientIcon: true,
-                          errorMessage: _lastNameError,
-                        ),
-                        _buildEditableField(
-                          icon: Icons.cake,
-                          label: 'Date of Birth',
-                          initialValue: dob,
-                          onChanged: (val) => setState(() => dob = val),
-                          gradientIcon: true,
-                        ),
-                        _buildEditableField(
-                          icon: Icons.wc,
-                          label: 'Gender',
-                          initialValue: gender,
-                          onChanged: (val) => setState(() => gender = val),
-                          gradientIcon: true,
-                        ),
-                        _buildEditableField(
-                          icon: Icons.phone,
-                          label: 'Phone Number',
-                          initialValue: phone,
-                          keyboardType: TextInputType.phone,
-                          onChanged: (val) => setState(() => phone = val),
-                          gradientIcon: true,
-                          errorMessage: _phoneError,
-                        ),
-                        _buildEditableField(
-                          icon: Icons.email,
-                          label: 'Email',
-                          initialValue: email,
-                          keyboardType: TextInputType.emailAddress,
-                          onChanged: (val) => setState(() => email = val),
-                          gradientIcon: true,
-                          errorMessage: _emailError,
-                        ),
-                                const SizedBox(height: 24),
-                                // Gradient Button with shadow
-                                Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(16),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Color(0xFF00d4ff).withOpacity(0.25),
-                                        blurRadius: 16,
-                                        offset: Offset(0, 8),
-                                      ),
-                                    ],
-                                  ),
-                                  child: ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(vertical: 16),
-                                      backgroundColor: Colors.transparent,
-                                      shadowColor: Colors.transparent,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                    ).copyWith(
-                                      elevation: MaterialStateProperty.all(0),
-                                      backgroundColor: MaterialStateProperty.all(Colors.transparent),
+                                    _buildEditableField(
+                                      icon: Icons.person,
+                                      label: 'First Name',
+                                      initialValue: firstName,
+                                      onChanged: (val) => setState(() => firstName = val),
+                                      gradientIcon: true,
+                                      errorMessage: _firstNameError,
                                     ),
-                                    onPressed: () {
-                                      if (_validateForm()) {
-                                        // Save logic here
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('Information saved!')),
-                                        );
-                                      }
-                                    },
-                                    child: Ink(
+                                    _buildEditableField(
+                                      icon: Icons.person_outline,
+                                      label: 'Last Name',
+                                      initialValue: lastName,
+                                      onChanged: (val) => setState(() => lastName = val),
+                                      gradientIcon: true,
+                                      errorMessage: _lastNameError,
+                                    ),
+                                    _buildEditableField(
+                                      icon: Icons.cake,
+                                      label: 'Date of Birth',
+                                      initialValue: dob,
+                                      onChanged: (val) => setState(() => dob = val),
+                                      gradientIcon: true,
+                                    ),
+                                    _buildEditableField(
+                                      icon: Icons.wc,
+                                      label: 'Gender',
+                                      initialValue: gender,
+                                      onChanged: (val) => setState(() => gender = val),
+                                      gradientIcon: true,
+                                    ),
+                                    _buildEditableField(
+                                      icon: Icons.phone,
+                                      label: 'Phone Number',
+                                      initialValue: phone,
+                                      keyboardType: TextInputType.phone,
+                                      onChanged: (val) => setState(() => phone = val),
+                                      gradientIcon: true,
+                                      errorMessage: _phoneError,
+                                    ),
+                                    _buildEditableField(
+                                      icon: Icons.email,
+                                      label: 'Email',
+                                      initialValue: email,
+                                      keyboardType: TextInputType.emailAddress,
+                                      onChanged: (val) => setState(() => email = val),
+                                      gradientIcon: true,
+                                      errorMessage: _emailError,
+                                    ),
+                                    const SizedBox(height: 24),
+                                    // Gradient Button with shadow
+                                    Container(
                                       decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors: [Color(0xFF00d4ff), Color(0xFF0f3460)],
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                        ),
                                         borderRadius: BorderRadius.circular(16),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Color(0xFF00d4ff).withOpacity(0.25),
+                                            blurRadius: 16,
+                                            offset: Offset(0, 8),
+                                          ),
+                                        ],
                                       ),
-                                      child: Container(
-                                        alignment: Alignment.center,
-                                        constraints: BoxConstraints(minHeight: 48),
-                                        child: const Text(
-                                          'Save',
-                                          style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
+                                      child: ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          padding: const EdgeInsets.symmetric(vertical: 16),
+                                          backgroundColor: Colors.transparent,
+                                          shadowColor: Colors.transparent,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(16),
+                                          ),
+                                        ).copyWith(
+                                          elevation: MaterialStateProperty.all(0),
+                                          backgroundColor: MaterialStateProperty.all(Colors.transparent),
+                                        ),
+                                        onPressed: () {
+                                          if (_validateForm()) {
+                                            // Save logic here
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text('Information saved!')),
+                                            );
+                                          }
+                                        },
+                                        child: Ink(
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              colors: [Color(0xFF00d4ff), Color(0xFF0f3460)],
+                                              begin: Alignment.topLeft,
+                                              end: Alignment.bottomRight,
+                                            ),
+                                            borderRadius: BorderRadius.circular(16),
+                                          ),
+                                          child: Container(
+                                            alignment: Alignment.center,
+                                            constraints: BoxConstraints(minHeight: 48),
+                                            child: const Text(
+                                              'Save',
+                                              style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     ),
-                                  ),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ),
                           ),
                         ),
