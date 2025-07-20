@@ -1,4 +1,14 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+require __DIR__ . '/src/Exception.php';
+require __DIR__ . '/src/PHPMailer.php';
+require __DIR__ . '/src/SMTP.php';
+
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
@@ -10,7 +20,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 // Database configuration (replace with your actual database details)
-
 $host = 'localhost';
 $dbname = 'ledgerly_db'; // replace with your actual database name
 $username = 'root';
@@ -57,12 +66,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        // Check if email is verified
-        if (!$user['email_verified']) {
-            echo json_encode(['success' => false, 'message' => 'Please verify your email first.']);
-            exit;
-        }
-        
         // Generate OTP
         $otp = sprintf("%06d", mt_rand(0, 999999));
         $otp_expiry = date('Y-m-d H:i:s', strtotime('+10 minutes'));
@@ -75,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $pdo->prepare("INSERT INTO otp_codes (user_id, email, otp, expiry_time, created_at) VALUES (?, ?, ?, ?, NOW())");
         $stmt->execute([$user['id'], $email, $otp, $otp_expiry]);
         
-        // Send email with OTP (you'll need to configure your email settings)
+        // Send email with OTP using PHPMailer
         $to = $email;
         $subject = "Ledgerly - Login Verification";
         $message = "Hello " . $user['name'] . ",\n\n";
@@ -84,19 +87,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $message .= "This code will expire in 10 minutes.\n\n";
         $message .= "If you didn't request this code, please ignore this email.\n\n";
         $message .= "Best regards,\nLedgerly Team";
-        
-        $headers = "From: noreply@ledgerly.com";
-        
-        // Uncomment the line below when you have email configured
-        mail($to, $subject, $message, $headers);
-        
-        // For testing, log the OTP (remove in production)
-        error_log("Login OTP for $email: $otp");
+
+        $mail = new PHPMailer(true);
+        try {
+            $mail->isSMTP();
+            $mail->Host = 'smtp.gmail.com';
+            $mail->SMTPAuth = true;
+            $mail->Username = 'saumyachandwani1510@gmail.com'; // Your Gmail address
+            $mail->Password = 'mvjhghmkrvlnvpod';    // Your Gmail App Password
+            $mail->SMTPSecure = 'tls';
+            $mail->Port = 587;
+
+            $mail->setFrom('saumyachandwani1510@gmail.com', 'Ledgerly');
+            $mail->addAddress($to, $user['name']);
+
+            $mail->isHTML(false);
+            $mail->Subject = $subject;
+            $mail->Body    = $message;
+
+            $mail->send();
+        } catch (Exception $e) {
+            error_log('Mailer Error: ' . $mail->ErrorInfo);
+        }
         
         echo json_encode([
             'success' => true, 
             'message' => 'OTP sent successfully. Please check your email.'
-            // 'otp' => $otp // Removed for production
         ]);
         
     } catch (Exception $e) {
@@ -105,4 +121,3 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 } else {
     echo json_encode(['success' => false, 'message' => 'Invalid request method']);
 }
-?>
