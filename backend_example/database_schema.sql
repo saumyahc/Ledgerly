@@ -1,11 +1,9 @@
--- Database schema for Ledgerly OTP system
-
 -- Create database
 CREATE DATABASE IF NOT EXISTS ledgerly_db;
 USE ledgerly_db;
 
 -- Users table
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
@@ -21,7 +19,7 @@ CREATE TABLE users (
 );
 
 -- OTP codes table
-CREATE TABLE otp_codes (
+CREATE TABLE IF NOT EXISTS otp_codes (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     email VARCHAR(255) NOT NULL,
@@ -35,12 +33,8 @@ CREATE TABLE otp_codes (
     INDEX idx_user_id (user_id)
 );
 
--- Insert sample data for testing (optional)
--- INSERT INTO users (name, email, phone, password, email_verified) VALUES 
--- ('Test User', 'test@example.com', '+1234567890', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', TRUE);
-
--- Create a view for active OTPs
-CREATE VIEW active_otps AS
+-- View for active OTPs (not expired, not used, and user exists)
+CREATE OR REPLACE VIEW active_otps AS
 SELECT 
     oc.id,
     oc.user_id,
@@ -48,12 +42,16 @@ SELECT
     oc.otp,
     oc.expiry_time,
     oc.created_at,
-    u.name as user_name,
+    u.name AS user_name,
     u.email_verified
 FROM otp_codes oc
 JOIN users u ON oc.user_id = u.id
 WHERE oc.expiry_time > NOW() AND oc.used = FALSE;
 
--- Create indexes for better performance
-CREATE INDEX idx_otp_codes_email_expiry ON otp_codes(email, expiry_time);
-CREATE INDEX idx_users_email_verified ON users(email, email_verified); 
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_otp_codes_email_expiry ON otp_codes(email, expiry_time);
+CREATE INDEX IF NOT EXISTS idx_users_email_verified ON users(email, email_verified);
+
+-- (Optional) For testing: Insert a sample user
+-- INSERT INTO users (name, email, phone, password, email_verified) VALUES 
+-- ('Test User', 'test@example.com', '+1234567890', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', TRUE);
