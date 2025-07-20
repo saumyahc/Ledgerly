@@ -1,4 +1,7 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
@@ -9,11 +12,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
-// Database configuration (replace with your actual database details)
 $host = 'localhost';
 $dbname = 'ledgerly_db';
-$username = 'your_username';
-$password = 'your_password';
+$username = 'root';
+$password = '';
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
@@ -25,75 +27,65 @@ try {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $input = json_decode(file_get_contents('php://input'), true);
-    
-    // If no JSON input, try POST data
     if (!$input) {
         $input = $_POST;
     }
-    
     $email = $input['email'] ?? '';
     $otp = $input['otp'] ?? '';
-    
-    // Validate input
+
     if (empty($email) || empty($otp)) {
         echo json_encode(['success' => false, 'message' => 'Email and OTP are required']);
         exit;
     }
-    
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        echo json_encode(['success' => false, 'message' => 'Invalid email format']);
+        exit;
+    }
+
     try {
-        // Find the OTP record
-        $stmt = $pdo->prepare("
-            SELECT oc.*, u.id as user_id, u.name, u.email, u.email_verified 
-            FROM otp_codes oc 
-            JOIN users u ON oc.user_id = u.id 
-            WHERE oc.email = ? AND oc.otp = ? AND oc.expiry_time > NOW()
-            ORDER BY oc.created_at DESC 
-            LIMIT 1
-        ");
+        // Find user
+        $stmt = $pdo->prepare("SELECT id, name, email FROM users WHERE email = ?");
+        $stmt->execute([$email]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$user) {
+            echo json_encode(['success' => false, 'message' => 'User not found. Please sign up first.']);
+            exit;
+        }
+        // Check OTP
+        $stmt = $pdo->prepare("SELECT id, expiry_time, used FROM otp_codes WHERE email = ? AND otp = ? ORDER BY created_at DESC LIMIT 1");
         $stmt->execute([$email, $otp]);
-        
-        if ($stmt->rowCount() === 0) {
-            echo json_encode(['success' => false, 'message' => 'Invalid or expired OTP']);
+        $otp_row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$otp_row) {
+            echo json_encode(['success' => false, 'message' => 'Invalid OTP']);
             exit;
         }
-        
-        $otp_record = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        // Check if user is verified
-        if (!$otp_record['email_verified']) {
-            echo json_encode(['success' => false, 'message' => 'Please verify your email first']);
+        if ($otp_row['used']) {
+            echo json_encode(['success' => false, 'message' => 'OTP already used']);
             exit;
         }
-        
-        // Begin transaction
-        $pdo->beginTransaction();
-        
-        // Update last login time
+        if (strtotime($otp_row['expiry_time']) < time()) {
+            echo json_encode(['success' => false, 'message' => 'OTP expired']);
+            exit;
+        }
+        // Mark OTP as used
+        $stmt = $pdo->prepare("UPDATE otp_codes SET used = 1 WHERE id = ?");
+        $stmt->execute([$otp_row['id']]);
+        // Optionally update last_login
         $stmt = $pdo->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
-        $stmt->execute([$otp_record['user_id']]);
-        
-        // Delete the used OTP
-        $stmt = $pdo->prepare("DELETE FROM otp_codes WHERE id = ?");
-        $stmt->execute([$otp_record['id']]);
-        
-        // Commit transaction
-        $pdo->commit();
-        
+        $stmt->execute([$user['id']]);
+        // Success response
         echo json_encode([
-            'success' => true, 
+            'success' => true,
             'message' => 'Login successful! Welcome back.',
             'user' => [
-                'id' => $otp_record['user_id'],
-                'name' => $otp_record['name'],
-                'email' => $otp_record['email']
+                'id' => $user['id'],
+                'name' => $user['name'],
+                'email' => $user['email']
             ]
         ]);
-        
     } catch (Exception $e) {
-        $pdo->rollback();
-        echo json_encode(['success' => false, 'message' => 'Login failed: ' . $e->getMessage()]);
+        echo json_encode(['success' => false, 'message' => 'OTP verification failed: ' . $e->getMessage()]);
     }
 } else {
     echo json_encode(['success' => false, 'message' => 'Invalid request method']);
-}
-?> 
+} 
