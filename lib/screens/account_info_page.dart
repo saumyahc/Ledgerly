@@ -1,9 +1,21 @@
 import 'dart:ui';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import '../theme.dart';
+import 'home_page.dart';
 
 class AccountInfoPage extends StatefulWidget {
-  const AccountInfoPage({super.key});
+  final int userId;
+  final String userName;
+  final String userEmail;
+
+  const AccountInfoPage({
+    super.key,
+    required this.userId,
+    required this.userName,
+    required this.userEmail,
+  });
 
   @override
   _AccountInfoPageState createState() => _AccountInfoPageState();
@@ -11,364 +23,393 @@ class AccountInfoPage extends StatefulWidget {
 
 class _AccountInfoPageState extends State<AccountInfoPage> {
   final _formKey = GlobalKey<FormState>();
-  String firstName = '';
-  String lastName = '';
-  String dob = '';
-  String gender = '';
-  String phone = '';
-  String email = '';
+
+  // Cryptocurrency-specific fields
+  String preferredCurrency = 'USD';
+  String dateOfBirth = '';
+  String address = '';
+  String city = '';
+  String country = '';
+  String postalCode = '';
 
   // Validation state variables
-  String? _firstNameError;
-  String? _lastNameError;
-  String? _emailError;
-  String? _phoneError;
+  String? _addressError;
+  String? _cityError;
+  String? _countryError;
+
+  final List<String> _currencies = [
+    'USD',
+    'EUR',
+    'GBP',
+    'JPY',
+    'CAD',
+    'AUD',
+    'CHF',
+    'CNY',
+  ];
+
+  final List<String> _countries = [
+    'United States',
+    'United Kingdom',
+    'Canada',
+    'Australia',
+    'Germany',
+    'France',
+    'Japan',
+    'Singapore',
+    'India',
+    'Brazil',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserProfile();
+  }
+
+  Future<void> _loadUserProfile() async {
+    try {
+      final response = await http.get(
+        Uri.parse(
+          'http://192.168.29.61/Ledgerly/backend_example/get_profile.php?user_id=${widget.userId}',
+        ),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['profile'] != null) {
+          final profile = data['profile'];
+          setState(() {
+            preferredCurrency = profile['preferred_currency'] ?? 'USD';
+            dateOfBirth = profile['date_of_birth'] ?? '';
+            address = profile['address'] ?? '';
+            city = profile['city'] ?? '';
+            country = profile['country'] ?? '';
+            postalCode = profile['postal_code'] ?? '';
+          });
+        }
+      }
+    } catch (e) {
+      // Handle error silently or show a snackbar
+      print('Error loading profile: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return TouchEffectOverlay(
-      child: Scaffold(
-        body: Stack(
-          children: [
-            // Subtle background circles for depth
-            Positioned(
-              top: -60,
-              left: -60,
-              child: _buildBackgroundCircle(180, [
-                Color(0xFF00d4ff).withOpacity(0.2),
-                Color(0xFF16213e).withOpacity(0.1),
-              ]),
+    return AnimatedBackground(
+      child: TouchEffectOverlay(
+        child: Scaffold(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            leading: IconButton(
+              icon: Icon(Icons.arrow_back, color: Colors.grey[800]),
+              onPressed: () => Navigator.pop(context),
             ),
-            Positioned(
-              bottom: -40,
-              right: -40,
-              child: _buildBackgroundCircle(120, [
-                Color(0xFF0f3460).withOpacity(0.15),
-                Color(0xFF00d4ff).withOpacity(0.1),
-              ]),
-            ),
-            Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF1a1a2e),
-                    Color(0xFF16213e),
-                    Color(0xFF0f3460),
-                  ],
-                ),
-              ),
-            ),
-            SafeArea(
-              child: Column(
-                children: [
-                  const SizedBox(height: 24),
-                  // Gradient Avatar with 3D effect
-                  Center(
-                    child: Container(
-                      padding: EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [Color(0xFF00d4ff), Color(0xFF0f3460)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.18),
-                            blurRadius: 24,
-                            offset: Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: CircleAvatar(
-                        radius: 48,
-                        backgroundColor: Colors.white,
-                        child: Icon(
-                          Icons.person,
-                          size: 64,
-                          color: Color(0xFF1a1a2e),
-                        ),
-                      ),
+          ),
+          body: SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24.0,
+                    vertical: 32,
+                  ),
+                  child: Card(
+                    elevation: 8,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Account Information',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Update your details',
-                    style: TextStyle(color: Colors.white70, fontSize: 16),
-                  ),
-                  const SizedBox(height: 24),
-                  // Glassmorphism Card with 3D shadow
-                  Expanded(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(32),
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.75),
-                              borderRadius: BorderRadius.circular(32),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.10),
-                                  blurRadius: 32,
-                                  offset: Offset(0, 16),
+                      padding: const EdgeInsets.all(24.0),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.account_circle,
+                              size: 64,
+                              color: AppColors.primary,
+                            ),
+                            const SizedBox(height: 24),
+                            Text(
+                              'Complete Your Profile',
+                              style: Theme.of(context).textTheme.displayLarge
+                                  ?.copyWith(
+                                    fontSize: 26,
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Set up your crypto payment profile',
+                              style: Theme.of(context).textTheme.bodyLarge
+                                  ?.copyWith(color: Colors.black54),
+                            ),
+                            const SizedBox(height: 16),
+                            // User info display
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: AppColors.primary.withOpacity(0.3),
+                                  width: 1,
                                 ),
-                              ],
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.3),
-                                width: 1.5,
                               ),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 16,
-                            ),
-                            child: Form(
-                              key: _formKey,
-                              child: ListView(
+                              child: Column(
                                 children: [
-                                  _buildEditableField(
-                                    icon: Icons.person,
-                                    label: 'First Name',
-                                    initialValue: firstName,
-                                    onChanged: (val) =>
-                                        setState(() => firstName = val),
-                                    gradientIcon: true,
-                                    errorMessage: _firstNameError,
-                                  ),
-                                  _buildEditableField(
-                                    icon: Icons.person_outline,
-                                    label: 'Last Name',
-                                    initialValue: lastName,
-                                    onChanged: (val) =>
-                                        setState(() => lastName = val),
-                                    gradientIcon: true,
-                                    errorMessage: _lastNameError,
-                                  ),
-                                  _buildEditableField(
-                                    icon: Icons.cake,
-                                    label: 'Date of Birth',
-                                    initialValue: dob,
-                                    onChanged: (val) =>
-                                        setState(() => dob = val),
-                                    gradientIcon: true,
-                                  ),
-                                  _buildEditableField(
-                                    icon: Icons.wc,
-                                    label: 'Gender',
-                                    initialValue: gender,
-                                    onChanged: (val) =>
-                                        setState(() => gender = val),
-                                    gradientIcon: true,
-                                  ),
-                                  _buildEditableField(
-                                    icon: Icons.phone,
-                                    label: 'Phone Number',
-                                    initialValue: phone,
-                                    keyboardType: TextInputType.phone,
-                                    onChanged: (val) =>
-                                        setState(() => phone = val),
-                                    gradientIcon: true,
-                                    errorMessage: _phoneError,
-                                  ),
-                                  _buildEditableField(
-                                    icon: Icons.email,
-                                    label: 'Email',
-                                    initialValue: email,
-                                    keyboardType: TextInputType.emailAddress,
-                                    onChanged: (val) =>
-                                        setState(() => email = val),
-                                    gradientIcon: true,
-                                    errorMessage: _emailError,
-                                  ),
-                                  const SizedBox(height: 24),
-                                  // Gradient Button with shadow
-                                  Container(
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(16),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Color(
-                                            0xFF00d4ff,
-                                          ).withOpacity(0.25),
-                                          blurRadius: 16,
-                                          offset: Offset(0, 8),
-                                        ),
-                                      ],
+                                  Text(
+                                    widget.userName,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                      color: AppColors.primary,
                                     ),
-                                    child: ElevatedButton(
-                                      style:
-                                          ElevatedButton.styleFrom(
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 16,
-                                            ),
-                                            backgroundColor: Colors.transparent,
-                                            shadowColor: Colors.transparent,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(16),
-                                            ),
-                                          ).copyWith(
-                                            elevation: WidgetStateProperty.all(
-                                              0,
-                                            ),
-                                            backgroundColor:
-                                                WidgetStateProperty.all(
-                                                  Colors.transparent,
-                                                ),
-                                          ),
-                                      onPressed: () {
-                                        if (_validateForm()) {
-                                          // Save logic here
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
-                                                'Information saved!',
-                                              ),
-                                            ),
-                                          );
-                                        }
-                                      },
-                                      child: Ink(
-                                        decoration: BoxDecoration(
-                                          gradient: LinearGradient(
-                                            colors: [
-                                              Color(0xFF00d4ff),
-                                              Color(0xFF0f3460),
-                                            ],
-                                            begin: Alignment.topLeft,
-                                            end: Alignment.bottomRight,
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            16,
-                                          ),
-                                        ),
-                                        child: Container(
-                                          alignment: Alignment.center,
-                                          constraints: BoxConstraints(
-                                            minHeight: 48,
-                                          ),
-                                          child: const Text(
-                                            'Save',
-                                            style: TextStyle(
-                                              fontSize: 18,
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    widget.userEmail,
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 14,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                          ),
+                            const SizedBox(height: 24),
+
+                            // Preferred Currency Dropdown
+                            DropdownButtonFormField<String>(
+                              value: preferredCurrency,
+                              decoration: InputDecoration(
+                                prefixIcon: Icon(
+                                  Icons.currency_exchange,
+                                  color: AppColors.primary,
+                                ),
+                                labelText: 'Preferred Currency',
+                              ),
+                              items: _currencies.map((String currency) {
+                                return DropdownMenuItem<String>(
+                                  value: currency,
+                                  child: Text(currency),
+                                );
+                              }).toList(),
+                              onChanged: (String? newValue) {
+                                setState(() {
+                                  preferredCurrency = newValue!;
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Date of Birth Field
+                            TextField(
+                              onChanged: (val) =>
+                                  setState(() => dateOfBirth = val),
+                              decoration: InputDecoration(
+                                prefixIcon: Icon(
+                                  Icons.cake,
+                                  color: AppColors.primary,
+                                ),
+                                labelText: 'Date of Birth (DD/MM/YYYY)',
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Address Field
+                            TextField(
+                              onChanged: (val) => setState(() => address = val),
+                              maxLines: 2,
+                              decoration: InputDecoration(
+                                prefixIcon: Icon(
+                                  Icons.home,
+                                  color: AppColors.primary,
+                                ),
+                                labelText: 'Address',
+                                errorText: _addressError,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // City Field
+                            TextField(
+                              onChanged: (val) => setState(() => city = val),
+                              decoration: InputDecoration(
+                                prefixIcon: Icon(
+                                  Icons.location_city,
+                                  color: AppColors.primary,
+                                ),
+                                labelText: 'City',
+                                errorText: _cityError,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Country Dropdown
+                            DropdownButtonFormField<String>(
+                              value: country.isEmpty ? null : country,
+                              decoration: InputDecoration(
+                                prefixIcon: Icon(
+                                  Icons.public,
+                                  color: AppColors.primary,
+                                ),
+                                labelText: 'Country',
+                                errorText: _countryError,
+                              ),
+                              items: _countries.map((String country) {
+                                return DropdownMenuItem<String>(
+                                  value: country,
+                                  child: Text(country),
+                                );
+                              }).toList(),
+                              onChanged: (String? newValue) {
+                                setState(() {
+                                  country = newValue ?? '';
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Postal Code Field
+                            TextField(
+                              onChanged: (val) =>
+                                  setState(() => postalCode = val),
+                              decoration: InputDecoration(
+                                prefixIcon: Icon(
+                                  Icons.markunread_mailbox,
+                                  color: AppColors.primary,
+                                ),
+                                labelText: 'Postal Code',
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+
+                            // Save Button
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: _isLoading ? null : _handleSave,
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                  backgroundColor: AppColors.primary,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                                child: _isLoading
+                                    ? SizedBox(
+                                        width: 24,
+                                        height: 24,
+                                        child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : Text(
+                                        'Save Profile',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleLarge
+                                            ?.copyWith(color: Colors.white),
+                                      ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
                   ),
-                ],
+                ),
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildEditableField({
-    required IconData icon,
-    required String label,
-    required String initialValue,
-    TextInputType keyboardType = TextInputType.text,
-    required ValueChanged<String> onChanged,
-    bool gradientIcon = false,
-    String? errorMessage,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            gradientIcon
-                ? ShaderMask(
-                    shaderCallback: (Rect bounds) {
-                      return LinearGradient(
-                        colors: [Color(0xFF00d4ff), Color(0xFF0f3460)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ).createShader(bounds);
-                    },
-                    child: Icon(icon, color: Colors.white, size: 24),
-                  )
-                : Icon(icon, color: Color(0xFF1a1a2e)),
-            const SizedBox(width: 12),
-            Expanded(
-              child: TextFormField(
-                initialValue: initialValue,
-                keyboardType: keyboardType,
-                decoration: InputDecoration(
-                  labelText: label,
-                  labelStyle: TextStyle(
-                    color: errorMessage != null
-                        ? Colors.red
-                        : Color(0xFF1a1a2e),
-                  ),
-                  enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(
-                      color: errorMessage != null
-                          ? Colors.red
-                          : Colors.grey.shade300,
-                    ),
-                  ),
-                  focusedBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(
-                      color: errorMessage != null
-                          ? Colors.red
-                          : Color(0xFF1a1a2e),
-                    ),
-                  ),
-                  errorBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.red),
-                  ),
-                ),
-                onChanged: onChanged,
-              ),
-            ),
-          ],
-        ),
-        if (errorMessage != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 8.0, left: 36.0),
-            child: Text(
-              errorMessage,
-              style: TextStyle(
-                color: Colors.red,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+  bool _isLoading = false;
+
+  Future<void> _handleSave() async {
+    if (_validateForm()) {
+      setState(() => _isLoading = true);
+
+      try {
+        final response = await http.post(
+          Uri.parse(
+            'http://192.168.29.61/Ledgerly/backend_example/save_profile.php',
           ),
-        const Divider(height: 24, thickness: 1, color: Color(0xFFF0F0F0)),
-      ],
-    );
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'user_id': widget.userId,
+            'preferred_currency': preferredCurrency,
+            'date_of_birth': dateOfBirth,
+            'address': address,
+            'city': city,
+            'country': country,
+            'postal_code': postalCode,
+          }),
+        );
+
+        setState(() => _isLoading = false);
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          if (data['success'] == true) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Profile saved successfully!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+
+            // Navigate to home page after successful save
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => HomePage(
+                  userId: widget.userId,
+                  userName: widget.userName,
+                  userEmail: widget.userEmail,
+                ),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(data['message'] ?? 'Failed to save profile'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Server error: ${response.statusCode}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save profile: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   bool _validateForm() {
@@ -376,58 +417,29 @@ class _AccountInfoPageState extends State<AccountInfoPage> {
 
     // Reset all errors
     setState(() {
-      _firstNameError = null;
-      _lastNameError = null;
-      _emailError = null;
-      _phoneError = null;
+      _addressError = null;
+      _cityError = null;
+      _countryError = null;
     });
 
-    // First Name validation
-    if (firstName.isEmpty) {
-      setState(() => _firstNameError = 'First name is required');
+    // Address validation
+    if (address.isEmpty) {
+      setState(() => _addressError = 'Address is required');
       isValid = false;
     }
 
-    // Last Name validation
-    if (lastName.isEmpty) {
-      setState(() => _lastNameError = 'Last name is required');
+    // City validation
+    if (city.isEmpty) {
+      setState(() => _cityError = 'City is required');
       isValid = false;
     }
 
-    // Email validation
-    if (email.isEmpty) {
-      setState(() => _emailError = 'Email is required');
-      isValid = false;
-    } else if (!_isValidEmail(email)) {
-      setState(() => _emailError = 'Please enter a valid email address');
-      isValid = false;
-    }
-
-    // Phone validation
-    if (phone.isEmpty) {
-      setState(() => _phoneError = 'Phone number is required');
+    // Country validation
+    if (country.isEmpty) {
+      setState(() => _countryError = 'Country is required');
       isValid = false;
     }
 
     return isValid;
-  }
-
-  bool _isValidEmail(String email) {
-    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
-  }
-
-  Widget _buildBackgroundCircle(double size, List<Color> colors) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          colors: colors,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-    );
   }
 }

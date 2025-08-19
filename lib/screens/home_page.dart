@@ -1,9 +1,19 @@
 // home_page.dart
 import 'package:flutter/material.dart';
 import '../theme.dart';
+import 'user_profile_view.dart';
 
 class HomePage extends StatelessWidget {
-  const HomePage({super.key});
+  final int userId;
+  final String userName;
+  final String userEmail;
+
+  const HomePage({
+    super.key,
+    required this.userId,
+    required this.userName,
+    required this.userEmail,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +24,9 @@ class HomePage extends StatelessWidget {
           appBar: AppBar(
             title: Text(
               'Ledgerly',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(color: Colors.white),
             ),
             backgroundColor: AppColors.primary,
             elevation: 0,
@@ -51,13 +63,18 @@ class HomePage extends StatelessWidget {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              'Welcome to Ledgerly!',
-                              style: Theme.of(context).textTheme.displayLarge?.copyWith(fontSize: 24, color: AppColors.primary),
+                              'Welcome back, $userName!',
+                              style: Theme.of(context).textTheme.displayLarge
+                                  ?.copyWith(
+                                    fontSize: 24,
+                                    color: AppColors.primary,
+                                  ),
                             ),
                             const SizedBox(height: 8),
                             Text(
                               'Your cryptocurrency payment solution',
-                              style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.black54),
+                              style: Theme.of(context).textTheme.bodyLarge
+                                  ?.copyWith(color: Colors.black54),
                             ),
                           ],
                         ),
@@ -75,9 +92,18 @@ class HomePage extends StatelessWidget {
                       constraints: BoxConstraints(minHeight: 110),
                       child: Glass3DCard(
                         child: ListTile(
-                          leading: Icon(Icons.account_balance_wallet, color: AppColors.primary),
-                          title: Text('My Wallet', style: Theme.of(context).textTheme.bodyLarge),
-                          subtitle: Text('View your cryptocurrency balance', style: Theme.of(context).textTheme.bodyMedium),
+                          leading: Icon(
+                            Icons.account_balance_wallet,
+                            color: AppColors.primary,
+                          ),
+                          title: Text(
+                            'My Wallet',
+                            style: Theme.of(context).textTheme.bodyLarge,
+                          ),
+                          subtitle: Text(
+                            'View your cryptocurrency balance',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
                           onTap: () {},
                         ),
                       ),
@@ -88,8 +114,14 @@ class HomePage extends StatelessWidget {
                       child: Glass3DCard(
                         child: ListTile(
                           leading: Icon(Icons.send, color: AppColors.primary),
-                          title: Text('Send Payment', style: Theme.of(context).textTheme.bodyLarge),
-                          subtitle: Text('Send cryptocurrency to others', style: Theme.of(context).textTheme.bodyMedium),
+                          title: Text(
+                            'Send Payment',
+                            style: Theme.of(context).textTheme.bodyLarge,
+                          ),
+                          subtitle: Text(
+                            'Send cryptocurrency to others',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
                           onTap: () {},
                         ),
                       ),
@@ -99,9 +131,18 @@ class HomePage extends StatelessWidget {
                       constraints: BoxConstraints(minHeight: 110),
                       child: Glass3DCard(
                         child: ListTile(
-                          leading: Icon(Icons.receipt_long, color: AppColors.primary),
-                          title: Text('Transaction History', style: Theme.of(context).textTheme.bodyLarge),
-                          subtitle: Text('View your payment history', style: Theme.of(context).textTheme.bodyMedium),
+                          leading: Icon(
+                            Icons.receipt_long,
+                            color: AppColors.primary,
+                          ),
+                          title: Text(
+                            'Transaction History',
+                            style: Theme.of(context).textTheme.bodyLarge,
+                          ),
+                          subtitle: Text(
+                            'View your payment history',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
                           onTap: () {},
                         ),
                       ),
@@ -111,9 +152,47 @@ class HomePage extends StatelessWidget {
                       constraints: BoxConstraints(minHeight: 110),
                       child: Glass3DCard(
                         child: ListTile(
-                          leading: Icon(Icons.settings, color: AppColors.primary),
-                          title: Text('Settings', style: Theme.of(context).textTheme.bodyLarge),
-                          subtitle: Text('Manage your account settings', style: Theme.of(context).textTheme.bodyMedium),
+                          leading: Icon(Icons.person, color: AppColors.primary),
+                          title: Text(
+                            'My Profile',
+                            style: Theme.of(context).textTheme.bodyLarge,
+                          ),
+                          subtitle: Text(
+                            'View and edit your profile',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => UserProfileView(
+                                  userId: userId,
+                                  userName: userName,
+                                  userEmail: userEmail,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      constraints: BoxConstraints(minHeight: 110),
+                      child: Glass3DCard(
+                        child: ListTile(
+                          leading: Icon(
+                            Icons.settings,
+                            color: AppColors.primary,
+                          ),
+                          title: Text(
+                            'Settings',
+                            style: Theme.of(context).textTheme.bodyLarge,
+                          ),
+                          subtitle: Text(
+                            'Manage your account settings',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
                           onTap: () {},
                         ),
                       ),
@@ -134,7 +213,12 @@ class HomePage extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     _buildFooterItem(Icons.home, 'Home', true, context),
-                    _buildFooterItem(Icons.account_balance_wallet, 'Wallet', false, context),
+                    _buildFooterItem(
+                      Icons.account_balance_wallet,
+                      'Wallet',
+                      false,
+                      context,
+                    ),
                     _buildFooterItem(Icons.history, 'History', false, context),
                     _buildFooterItem(Icons.person, 'Profile', false, context),
                   ],
@@ -147,7 +231,12 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildFooterItem(IconData icon, String label, bool selected, BuildContext context) {
+  Widget _buildFooterItem(
+    IconData icon,
+    String label,
+    bool selected,
+    BuildContext context,
+  ) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -156,9 +245,9 @@ class HomePage extends StatelessWidget {
         Text(
           label,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: selected ? AppColors.primary : Colors.grey,
-                fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-              ),
+            color: selected ? AppColors.primary : Colors.grey,
+            fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+          ),
         ),
       ],
     );

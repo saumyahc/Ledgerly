@@ -22,7 +22,7 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
     try {
       final response = await http.post(
         Uri.parse(
-          'http://192.168.65.61/Ledgerly/backend_example/verify_otp.php',
+          'http://192.168.29.61/Ledgerly/backend_example/verify_otp.php',
         ),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -37,6 +37,12 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
         try {
           final data = jsonDecode(response.body);
           if (data['success'] == true) {
+            // Extract user data from response
+            final userData = data['user'];
+            final userId = userData['id'];
+            final userName = userData['name'];
+            final userEmail = userData['email'];
+
             showDialog(
               context: context,
               builder: (context) => AlertDialog(
@@ -48,7 +54,11 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
                       Navigator.of(context).pop();
                       Navigator.of(context).pushReplacement(
                         MaterialPageRoute(
-                          builder: (context) => AccountInfoPage(),
+                          builder: (context) => AccountInfoPage(
+                            userId: userId,
+                            userName: userName,
+                            userEmail: userEmail,
+                          ),
                         ),
                       );
                     },
@@ -124,87 +134,98 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: Center(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32),
-            child: Card(
-              elevation: 8,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-              ),
+    return AnimatedBackground(
+      child: TouchEffectOverlay(
+        child: Scaffold(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          body: Center(
+            child: SingleChildScrollView(
               child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.verified_user,
-                      size: 64,
-                      color: AppColors.primary,
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Verify OTP',
-                      style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                        fontSize: 26,
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Enter the OTP sent to your email',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyLarge?.copyWith(color: Colors.black54),
-                    ),
-                    const SizedBox(height: 24),
-                    TextField(
-                      controller: _otpController,
-                      decoration: InputDecoration(
-                        prefixIcon: Icon(Icons.lock, color: AppColors.primary),
-                        labelText: 'OTP',
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _isLoading ? null : _verifyOtp,
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          backgroundColor: AppColors.primary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24.0,
+                  vertical: 32,
+                ),
+                child: Card(
+                  elevation: 8,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.verified_user,
+                          size: 64,
+                          color: AppColors.primary,
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          'Verify OTP',
+                          style: Theme.of(context).textTheme.displayLarge
+                              ?.copyWith(
+                                fontSize: 26,
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Enter the OTP sent to your email',
+                          style: Theme.of(context).textTheme.bodyLarge
+                              ?.copyWith(color: Colors.black54),
+                        ),
+                        const SizedBox(height: 24),
+                        TextField(
+                          controller: _otpController,
+                          decoration: InputDecoration(
+                            prefixIcon: Icon(
+                              Icons.lock,
+                              color: AppColors.primary,
+                            ),
+                            labelText: 'OTP',
                           ),
                         ),
-                        child: _isLoading
-                            ? SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : Text(
-                                'Verify',
-                                style: Theme.of(context).textTheme.titleLarge
-                                    ?.copyWith(color: Colors.white),
+                        const SizedBox(height: 24),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : _verifyOtp,
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              backgroundColor: AppColors.primary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
                               ),
-                      ),
+                            ),
+                            child: _isLoading
+                                ? SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Text(
+                                    'Verify',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleLarge
+                                        ?.copyWith(color: Colors.white),
+                                  ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          "Didn't receive the OTP? Resend",
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: AppColors.primary),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      "Didn't receive the OTP? Resend",
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),

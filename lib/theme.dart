@@ -43,13 +43,13 @@ final ThemeData appTheme = ThemeData(
   ),
   elevatedButtonTheme: ElevatedButtonThemeData(
     style: ButtonStyle(
-      backgroundColor: MaterialStatePropertyAll(AppColors.primary),
-      foregroundColor: MaterialStatePropertyAll(Colors.white),
-      shape: MaterialStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16)))),
-      padding: MaterialStatePropertyAll(EdgeInsets.symmetric(vertical: 16, horizontal: 32)),
-      textStyle: MaterialStatePropertyAll(TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-      elevation: MaterialStatePropertyAll(8),
-      shadowColor: MaterialStatePropertyAll(AppColors.primary.withOpacity(0.2)),
+      backgroundColor: WidgetStatePropertyAll(AppColors.primary),
+      foregroundColor: WidgetStatePropertyAll(Colors.white),
+      shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16)))),
+      padding: WidgetStatePropertyAll(EdgeInsets.symmetric(vertical: 16, horizontal: 32)),
+      textStyle: WidgetStatePropertyAll(TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+      elevation: WidgetStatePropertyAll(8),
+      shadowColor: WidgetStatePropertyAll(AppColors.primary.withOpacity(0.2)),
     ),
   ),
   cardTheme: CardThemeData(

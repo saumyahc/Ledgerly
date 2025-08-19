@@ -45,7 +45,7 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
     });
     try {
       final response = await http.post(
-        Uri.parse('http://192.168.65.61/Ledgerly/backend_example/send_otp.php'),
+        Uri.parse('http://192.168.29.61/Ledgerly/backend_example/send_otp.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email}),
       );

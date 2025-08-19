@@ -1,18 +1,28 @@
 import 'package:flutter/material.dart';
 import '../theme.dart';
 import 'home_page.dart';
-import 'dart:math';
 
 class OnboardingChecklistPage extends StatefulWidget {
-  const OnboardingChecklistPage({super.key});
+  final int userId;
+  final String userName;
+  final String userEmail;
+
+  const OnboardingChecklistPage({
+    super.key,
+    required this.userId,
+    required this.userName,
+    required this.userEmail,
+  });
 
   @override
-  State<OnboardingChecklistPage> createState() => _OnboardingChecklistPageState();
+  State<OnboardingChecklistPage> createState() =>
+      _OnboardingChecklistPageState();
 }
 
 enum TaskStatus { pending, inProgress, completed, skipped }
 
-class _OnboardingChecklistPageState extends State<OnboardingChecklistPage> with SingleTickerProviderStateMixin {
+class _OnboardingChecklistPageState extends State<OnboardingChecklistPage>
+    with SingleTickerProviderStateMixin {
   // Task states
   TaskStatus walletStatus = TaskStatus.pending;
   TaskStatus paymentStatus = TaskStatus.pending;
@@ -20,8 +30,10 @@ class _OnboardingChecklistPageState extends State<OnboardingChecklistPage> with 
 
   bool get allDone =>
       walletStatus == TaskStatus.completed &&
-      (paymentStatus == TaskStatus.completed || paymentStatus == TaskStatus.skipped) &&
-      (balanceStatus == TaskStatus.completed || balanceStatus == TaskStatus.skipped);
+      (paymentStatus == TaskStatus.completed ||
+          paymentStatus == TaskStatus.skipped) &&
+      (balanceStatus == TaskStatus.completed ||
+          balanceStatus == TaskStatus.skipped);
 
   int get completedCount {
     int count = 0;
@@ -85,7 +97,38 @@ class _OnboardingChecklistPageState extends State<OnboardingChecklistPage> with 
   }
 
   @override
+  void didUpdateWidget(covariant OnboardingChecklistPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _checkAndNavigateToHome();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _checkAndNavigateToHome();
+  }
+
+  void _checkAndNavigateToHome() {
+    if (allDone) {
+      Future.microtask(() {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => HomePage(
+              userId: widget.userId,
+              userName: widget.userName,
+              userEmail: widget.userEmail,
+            ),
+          ),
+        );
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // Call navigation check in build as well (safe due to Future.microtask)
+    _checkAndNavigateToHome();
     return AnimatedBackground(
       child: TouchEffectOverlay(
         child: Scaffold(
@@ -93,21 +136,29 @@ class _OnboardingChecklistPageState extends State<OnboardingChecklistPage> with 
           appBar: AppBar(
             backgroundColor: Colors.transparent,
             elevation: 0,
-            title: const Text("Let's Get Started!", style: TextStyle(color: Colors.black)),
+            title: const Text(
+              "Let's Get Started!",
+              style: TextStyle(color: Colors.black),
+            ),
             centerTitle: true,
           ),
           body: SafeArea(
             child: Center(
               child: SingleChildScrollView(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 24,
+                  ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(
                         'Your Onboarding Checklist',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppColors.primary),
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: AppColors.primary,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 20),
@@ -117,7 +168,8 @@ class _OnboardingChecklistPageState extends State<OnboardingChecklistPage> with 
                       _buildTaskCard(
                         index: 1,
                         title: 'Create Your Wallet',
-                        description: 'Your secure digital wallet is where your money lives. This is required to use Ledgerly.',
+                        description:
+                            'Your secure digital wallet is where your money lives. This is required to use Ledgerly.',
                         status: walletStatus,
                         isMandatory: true,
                         onAction: _startWallet,
@@ -130,28 +182,35 @@ class _OnboardingChecklistPageState extends State<OnboardingChecklistPage> with 
                       _buildTaskCard(
                         index: 2,
                         title: 'Make Your First Payment',
-                        description: 'Experience the ease of sending money with your new wallet.',
+                        description:
+                            'Experience the ease of sending money with your new wallet.',
                         status: paymentStatus,
                         isMandatory: false,
                         onAction: _startPayment,
                         onSkip: _skipPayment,
                         actionLabel: 'Make Payment',
                         locked: walletStatus != TaskStatus.completed,
-                        isCurrent: walletStatus == TaskStatus.completed && paymentStatus == TaskStatus.pending,
+                        isCurrent:
+                            walletStatus == TaskStatus.completed &&
+                            paymentStatus == TaskStatus.pending,
                       ),
                       const SizedBox(height: 16),
                       // Task 3: Check Balance
                       _buildTaskCard(
                         index: 3,
                         title: 'Check Your Balance',
-                        description: 'See your funds and track your transactions.',
+                        description:
+                            'See your funds and track your transactions.',
                         status: balanceStatus,
                         isMandatory: false,
                         onAction: _startBalance,
                         onSkip: _skipBalance,
                         actionLabel: 'View Balance',
                         locked: walletStatus != TaskStatus.completed,
-                        isCurrent: walletStatus == TaskStatus.completed && paymentStatus != TaskStatus.pending && balanceStatus == TaskStatus.pending,
+                        isCurrent:
+                            walletStatus == TaskStatus.completed &&
+                            paymentStatus != TaskStatus.pending &&
+                            balanceStatus == TaskStatus.pending,
                       ),
                       const SizedBox(height: 32),
                       if (allDone)
@@ -159,22 +218,11 @@ class _OnboardingChecklistPageState extends State<OnboardingChecklistPage> with 
                           children: [
                             Text(
                               "You're all set!",
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppColors.primary),
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(color: AppColors.primary),
                             ),
                             const SizedBox(height: 16),
-                            SizedBox(
-                              width: double.infinity,
-                              height: 56,
-                              child: Neumorphic3DButton(
-                                child: const Text('Go to Dashboard'),
-                                onTap: () {
-                                  Navigator.pushReplacement(
-                                    context,
-                                    MaterialPageRoute(builder: (context) => const HomePage()),
-                                  );
-                                },
-                              ),
-                            ),
+                            // Removed Go to Dashboard button
                           ],
                         ),
                       if (!allDone)
@@ -182,7 +230,11 @@ class _OnboardingChecklistPageState extends State<OnboardingChecklistPage> with 
                           padding: const EdgeInsets.only(top: 16.0),
                           child: Text(
                             'You can revisit skipped tasks later in Settings.',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.black54, fontStyle: FontStyle.italic),
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: Colors.black54,
+                                  fontStyle: FontStyle.italic,
+                                ),
                             textAlign: TextAlign.center,
                           ),
                         ),
@@ -207,7 +259,10 @@ class _OnboardingChecklistPageState extends State<OnboardingChecklistPage> with 
           minHeight: 10,
         ),
         const SizedBox(height: 8),
-        Text('$completedCount of 3 Tasks Completed', style: Theme.of(context).textTheme.bodyLarge),
+        Text(
+          '$completedCount of 3 Tasks Completed',
+          style: Theme.of(context).textTheme.bodyLarge,
+        ),
       ],
     );
   }
@@ -225,7 +280,9 @@ class _OnboardingChecklistPageState extends State<OnboardingChecklistPage> with 
     bool isCurrent = false,
   }) {
     final isLocked = locked && status == TaskStatus.pending;
-    final highlightColor = isCurrent ? AppColors.primary.withOpacity(0.18) : Colors.transparent;
+    final highlightColor = isCurrent
+        ? AppColors.primary.withOpacity(0.18)
+        : Colors.transparent;
     final borderColor = isCurrent ? AppColors.primary : Colors.transparent;
     final shadow = isCurrent
         ? [
@@ -251,16 +308,27 @@ class _OnboardingChecklistPageState extends State<OnboardingChecklistPage> with 
             children: [
               Text('$index.', style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(width: 8),
-              Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(color: isMandatory ? AppColors.primary : AppColors.secondary)),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: isMandatory ? AppColors.primary : AppColors.secondary,
+                ),
+              ),
               if (isMandatory)
                 Container(
                   margin: const EdgeInsets.only(left: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Text('Required', style: TextStyle(fontSize: 12, color: AppColors.primary)),
+                  child: const Text(
+                    'Required',
+                    style: TextStyle(fontSize: 12, color: AppColors.primary),
+                  ),
                 ),
             ],
           ),
@@ -275,8 +343,8 @@ class _OnboardingChecklistPageState extends State<OnboardingChecklistPage> with 
                     width: double.infinity,
                     height: 56,
                     child: Neumorphic3DButton(
-                      child: Text(actionLabel),
                       onTap: onAction,
+                      child: Text(actionLabel),
                     ),
                   ),
                 ),
@@ -290,7 +358,10 @@ class _OnboardingChecklistPageState extends State<OnboardingChecklistPage> with 
           if (status == TaskStatus.inProgress)
             Row(
               children: const [
-                CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(AppColors.primary)),
+                CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation(AppColors.primary),
+                ),
                 SizedBox(width: 12),
                 Text('Processing...'),
               ],
@@ -344,9 +415,6 @@ class _OnboardingChecklistPageState extends State<OnboardingChecklistPage> with 
         ),
       );
     }
-    return Opacity(
-      opacity: isLocked ? 0.5 : 1.0,
-      child: card,
-    );
+    return Opacity(opacity: isLocked ? 0.5 : 1.0, child: card);
   }
-} 
+}
