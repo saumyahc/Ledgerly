@@ -12,21 +12,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
-// Database configuration (replace with your actual database details)
-
-$host = 'localhost';
-$dbname = 'ledgerly_db'; // replace with your actual database name
-$username = 'root';
-$password = '';
-
-try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch(PDOException $e) {
-    echo json_encode(['success' => false, 'message' => 'Database connection failed']);
+// Database configuration via mysqli
+$env = parse_ini_file(__DIR__ . '/.env');
+$servername = $env['DB_HOST'];
+$database = $env['DB_NAME'];
+$username = $env['DB_USER'];
+$password = $env['DB_PASS'];
+$conn = new mysqli($servername, $username, $password, $database);
+if ($conn->connect_error) {
+    echo json_encode(['success' => false, 'message' => 'Database connection failed: '.$conn->connect_error]);
     exit;
 }
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $input = json_decode(file_get_contents('php://input'), true);
     
@@ -52,10 +48,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     // Check if user already exists
-    $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
-    $stmt->execute([$email]);
-    
-    if ($stmt->rowCount() > 0) {
+    $stmt = $conn->prepare("SELECT id FROM users WHERE email = ?");
+    $stmt->bind_param('s', $email);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result->num_rows > 0) {
         echo json_encode(['success' => false, 'message' => 'User with this email already exists']);
         exit;
     }
@@ -69,20 +66,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     try {
         // Begin transaction
-        $pdo->beginTransaction();
+    $conn->begin_transaction();
         
         // Insert user data
-        $stmt = $pdo->prepare("INSERT INTO users (name, email, phone, password, created_at) VALUES (?, ?, ?, ?, NOW())");
-        $stmt->execute([$name, $email, $phone, $hashed_password]);
-        
-        $user_id = $pdo->lastInsertId();
+    $stmt = $conn->prepare("INSERT INTO users (name, email, phone, password, created_at) VALUES (?, ?, ?, ?, NOW())");
+    $stmt->bind_param('ssss', $name, $email, $phone, $hashed_password);
+    $stmt->execute();
+    $user_id = $stmt->insert_id ?: $conn->insert_id;
         
         // Store OTP
-        $stmt = $pdo->prepare("INSERT INTO otp_codes (user_id, email, otp, expiry_time, created_at) VALUES (?, ?, ?, ?, NOW())");
-        $stmt->execute([$user_id, $email, $otp, $otp_expiry]);
+    $stmt = $conn->prepare("INSERT INTO otp_codes (user_id, email, otp, expiry_time, created_at) VALUES (?, ?, ?, ?, NOW())");
+    $stmt->bind_param('isss', $user_id, $email, $otp, $otp_expiry);
+    $stmt->execute();
         
         // Commit transaction
-        $pdo->commit();
+    $conn->commit();
         
         // Send email with OTP (you'll need to configure your email settings)
         $to = $email;
@@ -109,10 +107,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ]);
         
     } catch (Exception $e) {
-        $pdo->rollback();
+        $conn->rollback();
         echo json_encode(['success' => false, 'message' => 'Sign up failed: ' . $e->getMessage()]);
     }
 } else {
     echo json_encode(['success' => false, 'message' => 'Invalid request method']);
 }
-?> 
+?>

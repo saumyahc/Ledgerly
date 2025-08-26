@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../theme.dart';
+import '../constants.dart';
 import 'account_info_page.dart';
 
 class UserProfileView extends StatefulWidget {
@@ -35,7 +36,7 @@ class _UserProfileViewState extends State<UserProfileView> {
     try {
       final response = await http.get(
         Uri.parse(
-          'http://192.168.29.61/Ledgerly/backend_example/get_profile.php?user_id=${widget.userId}',
+          '${ApiConstants.getProfile}?user_id=${widget.userId}',
         ),
         headers: {'Content-Type': 'application/json'},
       );

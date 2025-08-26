@@ -12,19 +12,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
-$host = 'localhost';
-$dbname = 'ledgerly_db';
-$username = 'root';
-$password = '';
-
-try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch(PDOException $e) {
-    echo json_encode(['success' => false, 'message' => 'Database connection failed']);
+$env = parse_ini_file(__DIR__ . '/.env');
+$servername = $env['DB_HOST'];
+$database = $env['DB_NAME'];
+$username = $env['DB_USER'];
+$password = $env['DB_PASS'];
+$conn = new mysqli($servername, $username, $password, $database);
+if ($conn->connect_error) {
+    echo json_encode(['success' => false, 'message' => 'Database connection failed: '.$conn->connect_error]);
     exit;
 }
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $input = json_decode(file_get_contents('php://input'), true);
     if (!$input) {
@@ -44,17 +41,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         // Find user
-        $stmt = $pdo->prepare("SELECT id, name, email FROM users WHERE email = ?");
-        $stmt->execute([$email]);
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    $stmt = $conn->prepare("SELECT id, name, email FROM users WHERE email = ?");
+    $stmt->bind_param('s', $email);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $user = $result->fetch_assoc();
         if (!$user) {
             echo json_encode(['success' => false, 'message' => 'User not found. Please sign up first.']);
             exit;
         }
-        // Check OTP
-        $stmt = $pdo->prepare("SELECT id, expiry_time, used FROM otp_codes WHERE email = ? AND otp = ? ORDER BY created_at DESC LIMIT 1");
-        $stmt->execute([$email, $otp]);
-        $otp_row = $stmt->fetch(PDO::FETCH_ASSOC);
+    // Check OTP
+    $stmt = $conn->prepare("SELECT id, expiry_time, used FROM otp_codes WHERE email = ? AND otp = ? ORDER BY created_at DESC LIMIT 1");
+    $stmt->bind_param('ss', $email, $otp);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $otp_row = $result->fetch_assoc();
         if (!$otp_row) {
             echo json_encode(['success' => false, 'message' => 'Invalid OTP']);
             exit;
@@ -68,11 +69,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
         // Mark OTP as used
-        $stmt = $pdo->prepare("UPDATE otp_codes SET used = 1 WHERE id = ?");
-        $stmt->execute([$otp_row['id']]);
+    $stmt = $conn->prepare("UPDATE otp_codes SET used = 1 WHERE id = ?");
+    $stmt->bind_param('i', $otp_row['id']);
+    $stmt->execute();
         // Optionally update last_login
-        $stmt = $pdo->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
-        $stmt->execute([$user['id']]);
+    $stmt = $conn->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
+    $stmt->bind_param('i', $user['id']);
+    $stmt->execute();
         // Success response
         echo json_encode([
             'success' => true,
@@ -88,4 +91,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 } else {
     echo json_encode(['success' => false, 'message' => 'Invalid request method']);
-} 
+}

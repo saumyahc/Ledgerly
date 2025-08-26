@@ -4,19 +4,16 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET');
 header('Access-Control-Allow-Headers: Content-Type');
 
-// Database configuration
-$host = 'localhost';
-$dbname = 'ledgerly_db';
-$username = 'root';
-$password = '';
-
-try {
-    // Create PDO connection
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $username, $password);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch (PDOException $e) {
+// Load environment variables & connect via mysqli
+$env = parse_ini_file(__DIR__ . '/.env');
+$servername = $env['DB_HOST'];
+$database = $env['DB_DATABASE'];
+$username = $env['DB_USERNAME'];
+$password = $env['DB_PASSWORD'];
+$conn = new mysqli($servername, $username, $password, $database);
+if ($conn->connect_error) {
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Database connection failed']);
+    echo json_encode(['success' => false, 'message' => 'Database connection failed: '.$conn->connect_error]);
     exit;
 }
 
@@ -30,25 +27,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         exit;
     }
     
-    try {
-        // Get user profile data
-        $stmt = $pdo->prepare("
-            SELECT 
-                up.preferred_currency,
-                up.date_of_birth,
-                up.address,
-                up.city,
-                up.country,
-                up.postal_code,
-                up.profile_completed,
-                up.created_at,
-                up.updated_at
-            FROM user_profiles up
-            WHERE up.user_id = ?
-        ");
-        
-        $stmt->execute([$user_id]);
-        $profile = $stmt->fetch(PDO::FETCH_ASSOC);
+    // Get user profile data
+    $sql = "SELECT up.preferred_currency, up.date_of_birth, up.address, up.city, up.country, up.postal_code, up.profile_completed, up.created_at, up.updated_at FROM user_profiles up WHERE up.user_id = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param('i', $user_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $profile = $result->fetch_assoc();
         
         if ($profile) {
             // Convert date format for frontend
@@ -88,4 +73,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     http_response_code(405);
     echo json_encode(['success' => false, 'message' => 'Method not allowed']);
 }
-?> 
+?>

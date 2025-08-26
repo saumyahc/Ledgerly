@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../theme.dart';
+import '../constants.dart';
 import 'home_page.dart';
 
 class AccountInfoPage extends StatefulWidget {
@@ -70,9 +71,7 @@ class _AccountInfoPageState extends State<AccountInfoPage> {
   Future<void> _loadUserProfile() async {
     try {
       final response = await http.get(
-        Uri.parse(
-          'http://192.168.29.61/Ledgerly/backend_example/get_profile.php?user_id=${widget.userId}',
-        ),
+        Uri.parse('${ApiConstants.getProfile}?user_id=${widget.userId}'),
         headers: {'Content-Type': 'application/json'},
       );
 
@@ -346,9 +345,7 @@ class _AccountInfoPageState extends State<AccountInfoPage> {
 
       try {
         final response = await http.post(
-          Uri.parse(
-            'http://192.168.29.61/Ledgerly/backend_example/save_profile.php',
-          ),
+          Uri.parse(ApiConstants.saveProfile),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'user_id': widget.userId,

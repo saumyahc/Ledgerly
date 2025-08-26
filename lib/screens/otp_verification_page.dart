@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../constants.dart';
 import '../theme.dart';
 import 'account_info_page.dart';
 
@@ -21,9 +22,7 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
     setState(() => _isLoading = true);
     try {
       final response = await http.post(
-        Uri.parse(
-          'http://192.168.29.61/Ledgerly/backend_example/verify_otp.php',
-        ),
+        Uri.parse(ApiConstants.verifyOtp),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'email': widget.email,

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../constants.dart';
 import '../theme.dart';
 import 'email_verification.dart';
 
@@ -125,7 +126,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://192.168.29.61/Ledgerly/backend_example/signup.php'),
+        Uri.parse(ApiConstants.signup),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'name': _nameController.text.trim(),

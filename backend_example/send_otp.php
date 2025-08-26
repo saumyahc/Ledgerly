@@ -20,16 +20,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 // Database configuration (replace with your actual database details)
-$host = 'localhost';
-$dbname = 'ledgerly_db'; // replace with your actual database name
-$username = 'root';
-$password = '';
-
-try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch(PDOException $e) {
-    echo json_encode(['success' => false, 'message' => 'Database connection failed']);
+$env = parse_ini_file(__DIR__ . '/.env');
+$servername = $env['DB_HOST'];
+$database = $env['DB_NAME'];
+$username = $env['DB_USER'];
+$password = $env['DB_PASS'];
+$conn = new mysqli($servername, $username, $password, $database);
+if ($conn->connect_error) {
+    echo json_encode(['success' => false, 'message' => 'Database connection failed: '.$conn->connect_error]);
     exit;
 }
 
@@ -56,27 +54,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     try {
         // Check if user exists
-        $stmt = $pdo->prepare("SELECT id, name, email_verified FROM users WHERE email = ?");
-        $stmt->execute([$email]);
-        
-        if ($stmt->rowCount() === 0) {
+    $stmt = $conn->prepare("SELECT id, name, email_verified FROM users WHERE email = ?");
+    $stmt->bind_param('s', $email);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result->num_rows === 0) {
             echo json_encode(['success' => false, 'message' => 'User not found. Please sign up first.']);
             exit;
         }
-        
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    $user = $result->fetch_assoc();
         
         // Generate OTP
         $otp = sprintf("%06d", mt_rand(0, 999999));
         $otp_expiry = date('Y-m-d H:i:s', strtotime('+10 minutes'));
         
         // Delete any existing OTP for this user
-        $stmt = $pdo->prepare("DELETE FROM otp_codes WHERE user_id = ?");
-        $stmt->execute([$user['id']]);
+    $stmt = $conn->prepare("DELETE FROM otp_codes WHERE user_id = ?");
+    $stmt->bind_param('i', $user['id']);
+    $stmt->execute();
         
         // Store new OTP
-        $stmt = $pdo->prepare("INSERT INTO otp_codes (user_id, email, otp, expiry_time, created_at) VALUES (?, ?, ?, ?, NOW())");
-        $stmt->execute([$user['id'], $email, $otp, $otp_expiry]);
+    $stmt = $conn->prepare("INSERT INTO otp_codes (user_id, email, otp, expiry_time, created_at) VALUES (?, ?, ?, ?, NOW())");
+    $stmt->bind_param('isss', $user['id'], $email, $otp, $otp_expiry);
+    $stmt->execute();
         
         // Send email with OTP using PHPMailer
         $to = $email;

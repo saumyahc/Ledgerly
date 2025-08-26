@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'signup_page.dart';
+import '../constants.dart';
 import '../theme.dart';
 import 'otp_verification_page.dart';
 
@@ -45,7 +46,7 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
     });
     try {
       final response = await http.post(
-        Uri.parse('http://192.168.29.61/Ledgerly/backend_example/send_otp.php'),
+        Uri.parse(ApiConstants.sendOtp),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email}),
       );

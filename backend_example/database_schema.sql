@@ -1,6 +1,4 @@
--- Create database
-CREATE DATABASE IF NOT EXISTS ledgerly_db;
-USE ledgerly_db;
+
 
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
@@ -100,4 +98,4 @@ CREATE INDEX IF NOT EXISTS idx_user_profiles_currency ON user_profiles(preferred
 
 -- (Optional) For testing: Insert a sample user profile
 -- INSERT INTO user_profiles (user_id, preferred_currency, date_of_birth, address, city, country, postal_code, profile_completed) VALUES 
--- (1, 'USD', '1990-01-01', '123 Main St', 'New York', 'United States', '10001', TRUE);
+-- (1, 'USD', '1990-01-01', '123 Main St', 'New York', 'United States', '10001', TRUE); 

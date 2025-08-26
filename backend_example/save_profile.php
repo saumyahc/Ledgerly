@@ -4,19 +4,16 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST');
 header('Access-Control-Allow-Headers: Content-Type');
 
-// Database configuration
-$host = 'localhost';
-$dbname = 'ledgerly_db';
-$username = 'root';
-$password = '';
-
-try {
-    // Create PDO connection
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $username, $password);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch (PDOException $e) {
+// Load environment variables & connect via mysqli
+$env = parse_ini_file(__DIR__ . '/.env');
+$servername = $env['DB_HOST'];
+$database = $env['DB_NAME'];
+$username = $env['DB_USER'];
+$password = $env['DB_PASS'];
+$conn = new mysqli($servername, $username, $password, $database);
+if ($conn->connect_error) {
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Database connection failed']);
+    echo json_encode(['success' => false, 'message' => 'Database connection failed: ' . $conn->connect_error]);
     exit;
 }
 
@@ -41,22 +38,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // Validate required fields
     $errors = [];
-    
-    if (!$user_id) {
-        $errors[] = 'User ID is required';
-    }
-    
-    if (!$address || trim($address) === '') {
-        $errors[] = 'Address is required';
-    }
-    
-    if (!$city || trim($city) === '') {
-        $errors[] = 'City is required';
-    }
-    
-    if (!$country || trim($country) === '') {
-        $errors[] = 'Country is required';
-    }
+    if (!$user_id) $errors[] = 'User ID is required';
+    if (!$address || trim($address) === '') $errors[] = 'Address is required';
+    if (!$city || trim($city) === '') $errors[] = 'City is required';
+    if (!$country || trim($country) === '') $errors[] = 'Country is required';
     
     // Validate currency
     $valid_currencies = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY'];
@@ -77,17 +62,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         echo json_encode(['success' => false, 'message' => implode(', ', $errors)]);
         exit;
     }
-    
+
     try {
         // Check if user exists
-        $stmt = $pdo->prepare("SELECT id FROM users WHERE id = ?");
-        $stmt->execute([$user_id]);
-        
-        if (!$stmt->fetch()) {
+        $stmt = $conn->prepare("SELECT id FROM users WHERE id = ?");
+        $stmt->bind_param('i', $user_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($result->num_rows === 0) {
             http_response_code(404);
             echo json_encode(['success' => false, 'message' => 'User not found']);
             exit;
         }
+        $stmt->close();
         
         // Convert date format for database storage
         $db_date_of_birth = null;
@@ -97,51 +84,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         // Check if profile already exists
-        $stmt = $pdo->prepare("SELECT id FROM user_profiles WHERE user_id = ?");
-        $stmt->execute([$user_id]);
-        $existing_profile = $stmt->fetch();
+        $stmt = $conn->prepare("SELECT id FROM user_profiles WHERE user_id = ?");
+        $stmt->bind_param('i', $user_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $existing_profile = $result->fetch_assoc();
+        $stmt->close();
         
         if ($existing_profile) {
             // Update existing profile
-            $stmt = $pdo->prepare("
-                UPDATE user_profiles 
-                SET preferred_currency = ?, 
-                    date_of_birth = ?, 
-                    address = ?, 
-                    city = ?, 
-                    country = ?, 
-                    postal_code = ?,
-                    profile_completed = TRUE,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE user_id = ?
-            ");
-            
-            $stmt->execute([
-                $preferred_currency,
-                $db_date_of_birth,
-                $address,
-                $city,
-                $country,
-                $postal_code,
-                $user_id
-            ]);
+            $stmt = $conn->prepare("UPDATE user_profiles SET preferred_currency=?, date_of_birth=?, address=?, city=?, country=?, postal_code=?, profile_completed=TRUE, updated_at=CURRENT_TIMESTAMP WHERE user_id=?");
+            $stmt->bind_param('ssssssi', $preferred_currency, $db_date_of_birth, $address, $city, $country, $postal_code, $user_id);
+            $stmt->execute();
+            $stmt->close();
         } else {
             // Insert new profile
-            $stmt = $pdo->prepare("
-                INSERT INTO user_profiles 
-                (user_id, preferred_currency, date_of_birth, address, city, country, postal_code, profile_completed)
-                VALUES (?, ?, ?, ?, ?, ?, ?, TRUE)
-            ");
-            
-            $stmt->execute([
-                $user_id,
-                $preferred_currency,
-                $db_date_of_birth,
-                $address,
-                $city,
-                $country,
-                $postal_code
-            ]);
+            $stmt = $conn->prepare("INSERT INTO user_profiles (user_id, preferred_currency, date_of_birth, address, city, country, postal_code, profile_completed) VALUES (?, ?, ?, ?, ?, ?, ?, TRUE)");
+            $stmt->bind_param('issssss', $user_id, $preferred_currency, $db_date_of_birth, $address, $city, $country, $postal_code);
+            $stmt->execute();
+            $stmt->close();
         }
         
         echo json_encode([
@@ -150,13 +111,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'profile_completed' => true
         ]);
         
-    } catch (PDOException $e) {
+    } catch (Exception $e) {
         http_response_code(500);
         echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
     }
-    
 } else {
     http_response_code(405);
     echo json_encode(['success' => false, 'message' => 'Method not allowed']);
 }
-?> 
+?>
