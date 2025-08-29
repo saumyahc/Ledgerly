@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import '../constants.dart';
 import '../theme.dart';
 import 'email_verification.dart';
+import '../models/password_requirement.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -28,23 +29,23 @@ class _SignUpPageState extends State<SignUpPage> {
   String? _confirmPasswordError;
 
   // Password requirements
-  final List<_PasswordRequirement> _requirements = [
-    _PasswordRequirement('At least 8 characters', (s) => s.length >= 8),
-    _PasswordRequirement(
+  final List<PasswordRequirement> _requirements = [
+    PasswordRequirement('At least 8 characters', (s) => s.length >= 8),
+    PasswordRequirement(
       'At least one uppercase letter',
       (s) => s.contains(RegExp(r'[A-Z]')),
     ),
-    _PasswordRequirement(
+    PasswordRequirement(
       'At least one lowercase letter',
       (s) => s.contains(RegExp(r'[a-z]')),
     ),
-    _PasswordRequirement(
-      'At least one number',
+    PasswordRequirement(
+      'At least one digit',
       (s) => s.contains(RegExp(r'[0-9]')),
     ),
-    _PasswordRequirement(
-      'At least one special character (@#\$%^&*! etc)',
-      (s) => s.contains(RegExp(r'[@#\$%\^&\*!]')),
+    PasswordRequirement(
+      'At least one special character',
+      (s) => s.contains(RegExp(r'[!@#\$%^&*(),.?":{}|<>]')),
     ),
   ];
 
@@ -462,16 +463,11 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 }
 
-// Helper class for password requirements
-class _PasswordRequirement {
-  final String label;
-  final bool Function(String) check;
-  _PasswordRequirement(this.label, this.check);
-}
+// Helper class moved to models/password_requirement.dart
 
 // Password requirements dialog widget
 class _PasswordRequirementsDialog extends StatefulWidget {
-  final List<_PasswordRequirement> requirements;
+  final List<PasswordRequirement> requirements;
   final String initialPassword;
   const _PasswordRequirementsDialog({
     required this.requirements,
