@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../theme.dart';
 import '../constants.dart';
-import 'home_page.dart';
+import 'main_navigation.dart';
+import '../services/session_manager.dart';
 
 class AccountInfoPage extends StatefulWidget {
   final int userId;
@@ -24,6 +25,12 @@ class AccountInfoPage extends StatefulWidget {
 
 class _AccountInfoPageState extends State<AccountInfoPage> {
   final _formKey = GlobalKey<FormState>();
+
+  // Text controllers for form fields
+  final TextEditingController _dateOfBirthController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _cityController = TextEditingController();
+  final TextEditingController _postalCodeController = TextEditingController();
 
   // Cryptocurrency-specific fields
   String preferredCurrency = 'USD';
@@ -68,17 +75,37 @@ class _AccountInfoPageState extends State<AccountInfoPage> {
     _loadUserProfile();
   }
 
+  @override
+  void dispose() {
+    _dateOfBirthController.dispose();
+    _addressController.dispose();
+    _cityController.dispose();
+    _postalCodeController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadUserProfile() async {
     try {
+      final url = '${ApiConstants.getProfile}?user_id=${widget.userId}';
+      print('👤 Account Info - Loading profile from: $url');
+      print('👤 Account Info - User ID: ${widget.userId}');
+      
       final response = await http.get(
-        Uri.parse('${ApiConstants.getProfile}?user_id=${widget.userId}'),
+        Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
       );
 
+      print('👤 Account Info - Response Status: ${response.statusCode}');
+      print('👤 Account Info - Response Body: ${response.body}');
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        print('👤 Account Info - Parsed Data: $data');
+        
         if (data['success'] == true && data['profile'] != null) {
           final profile = data['profile'];
+          print('👤 Account Info - Profile Data: $profile');
+          
           setState(() {
             preferredCurrency = profile['preferred_currency'] ?? 'USD';
             dateOfBirth = profile['date_of_birth'] ?? '';
@@ -86,17 +113,33 @@ class _AccountInfoPageState extends State<AccountInfoPage> {
             city = profile['city'] ?? '';
             country = profile['country'] ?? '';
             postalCode = profile['postal_code'] ?? '';
+            
+            print('👤 Account Info - Setting controllers with loaded data');
+            // Update controllers with loaded data
+            _dateOfBirthController.text = dateOfBirth;
+            _addressController.text = address;
+            _cityController.text = city;
+            _postalCodeController.text = postalCode;
           });
+          
+          print('👤 Account Info - Profile loaded successfully');
+        } else {
+          print('👤 Account Info - Success=false or profile is null');
         }
+      } else {
+        print('👤 Account Info - HTTP Error: ${response.statusCode}');
       }
     } catch (e) {
       // Handle error silently or show a snackbar
-      print('Error loading profile: $e');
+      print('👤 Account Info - Exception: $e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Extend session when user is on account info page
+    SessionManager.extendSession();
+    
     return AnimatedBackground(
       child: TouchEffectOverlay(
         child: Scaffold(
@@ -211,6 +254,7 @@ class _AccountInfoPageState extends State<AccountInfoPage> {
 
                             // Date of Birth Field
                             TextField(
+                              controller: _dateOfBirthController,
                               onChanged: (val) =>
                                   setState(() => dateOfBirth = val),
                               decoration: InputDecoration(
@@ -225,6 +269,7 @@ class _AccountInfoPageState extends State<AccountInfoPage> {
 
                             // Address Field
                             TextField(
+                              controller: _addressController,
                               onChanged: (val) => setState(() => address = val),
                               maxLines: 2,
                               decoration: InputDecoration(
@@ -240,6 +285,7 @@ class _AccountInfoPageState extends State<AccountInfoPage> {
 
                             // City Field
                             TextField(
+                              controller: _cityController,
                               onChanged: (val) => setState(() => city = val),
                               decoration: InputDecoration(
                                 prefixIcon: Icon(
@@ -279,6 +325,7 @@ class _AccountInfoPageState extends State<AccountInfoPage> {
 
                             // Postal Code Field
                             TextField(
+                              controller: _postalCodeController,
                               onChanged: (val) =>
                                   setState(() => postalCode = val),
                               decoration: InputDecoration(
@@ -370,16 +417,20 @@ class _AccountInfoPageState extends State<AccountInfoPage> {
               ),
             );
 
-            // Navigate to home page after successful save
-            Navigator.pushReplacement(
+            // Update session to mark profile as complete
+            await SessionManager.updateProfileComplete(true);
+
+            // Navigate to home page after successful save and clear navigation stack
+            Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(
-                builder: (context) => HomePage(
+                builder: (context) => MainNavigation(
                   userId: widget.userId,
                   userName: widget.userName,
                   userEmail: widget.userEmail,
                 ),
               ),
+              (route) => false, // Remove all previous routes
             );
           } else {
             ScaffoldMessenger.of(context).showSnackBar(

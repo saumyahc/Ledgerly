@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import '../constants.dart';
 import '../theme.dart';
 import 'account_info_page.dart';
+import 'main_navigation.dart';
+import '../services/session_manager.dart';
 
 class OTPVerificationPage extends StatefulWidget {
   final String email;
@@ -17,6 +19,61 @@ class OTPVerificationPage extends StatefulWidget {
 class _OTPVerificationPageState extends State<OTPVerificationPage> {
   final TextEditingController _otpController = TextEditingController();
   bool _isLoading = false;
+
+  Future<bool> _checkProfileComplete(int userId) async {
+    try {
+      final url = '${ApiConstants.getProfile}?user_id=$userId';
+      print('🔍 Profile Check - Making request to: $url');
+      print('🔍 Profile Check - User ID: $userId');
+      
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      print('🔍 Profile Check - Response Status: ${response.statusCode}');
+      print('🔍 Profile Check - Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('🔍 Profile Check - Parsed Data: $data');
+        
+        if (data['success'] == true && data['profile'] != null) {
+          final profile = data['profile'];
+          print('🔍 Profile Check - Profile Data: $profile');
+          
+          // Check if essential profile fields are present
+          final preferredCurrency = profile['preferred_currency'];
+          final address = profile['address'];
+          final city = profile['city'];
+          final country = profile['country'];
+          
+          print('🔍 Profile Check - preferred_currency: $preferredCurrency');
+          print('🔍 Profile Check - address: $address');
+          print('🔍 Profile Check - city: $city');
+          print('🔍 Profile Check - country: $country');
+          
+          final bool hasRequiredFields = 
+            preferredCurrency != null &&
+            address != null && address.toString().isNotEmpty &&
+            city != null && city.toString().isNotEmpty &&
+            country != null && country.toString().isNotEmpty;
+          
+          print('🔍 Profile Check - Has Required Fields: $hasRequiredFields');
+          return hasRequiredFields;
+        } else {
+          print('🔍 Profile Check - Success=false or profile is null');
+          return false;
+        }
+      } else {
+        print('🔍 Profile Check - HTTP Error: ${response.statusCode}');
+        return false;
+      }
+    } catch (e) {
+      print('🔍 Profile Check - Exception: $e');
+      return false;
+    }
+  }
 
   Future<void> _verifyOtp() async {
     setState(() => _isLoading = true);
@@ -35,12 +92,31 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
       if (response.statusCode == 200) {
         try {
           final data = jsonDecode(response.body);
+          print('📧 OTP Verification - Response Data: $data');
+          
           if (data['success'] == true) {
             // Extract user data from response
             final userData = data['user'];
+            print('📧 OTP Verification - User Data: $userData');
+            
             final userId = userData['id'];
             final userName = userData['name'];
             final userEmail = userData['email'];
+            
+            print('📧 OTP Verification - Extracted: userId=$userId, userName=$userName, userEmail=$userEmail');
+
+            // Check if profile is complete
+            print('📧 OTP Verification - Checking profile completeness...');
+            final bool profileComplete = await _checkProfileComplete(userId);
+            print('📧 OTP Verification - Profile Complete: $profileComplete');
+
+            // Save user session
+            await SessionManager.saveUserSession(
+              userId: userId,
+              userName: userName,
+              userEmail: userEmail,
+              profileComplete: profileComplete,
+            );
 
             showDialog(
               context: context,
@@ -51,15 +127,32 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
                   TextButton(
                     onPressed: () {
                       Navigator.of(context).pop();
-                      Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(
-                          builder: (context) => AccountInfoPage(
-                            userId: userId,
-                            userName: userName,
-                            userEmail: userEmail,
+                      if (profileComplete) {
+                        print('🚀 Navigation - Going to MainNavigation (profile complete) and clearing navigation stack');
+                        // Navigate to home page and clear entire navigation stack
+                        Navigator.of(context).pushAndRemoveUntil(
+                          MaterialPageRoute(
+                            builder: (context) => MainNavigation(
+                              userId: userId,
+                              userName: userName,
+                              userEmail: userEmail,
+                            ),
                           ),
-                        ),
-                      );
+                          (route) => false, // Remove all previous routes
+                        );
+                      } else {
+                        print('🚀 Navigation - Going to AccountInfoPage (profile incomplete)');
+                        // Navigate to account info page if profile is incomplete
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(
+                            builder: (context) => AccountInfoPage(
+                              userId: userId,
+                              userName: userName,
+                              userEmail: userEmail,
+                            ),
+                          ),
+                        );
+                      }
                     },
                     child: Text('OK'),
                   ),

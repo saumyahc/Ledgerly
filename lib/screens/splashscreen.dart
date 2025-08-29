@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ledgerly/screens/email_verification.dart';
 import '../theme.dart';
+import '../services/session_manager.dart';
+import 'main_navigation.dart';
+import 'account_info_page.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -83,16 +86,62 @@ class _SplashScreenState extends State<SplashScreen>
     await Future.delayed(const Duration(milliseconds: 3000));
 
     if (mounted) {
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              EmailVerificationPage(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-          transitionDuration: const Duration(milliseconds: 500),
-        ),
-      );
+      // Check for existing user session
+      print('🚀 SplashScreen - Checking for existing user session...');
+      final userSession = await SessionManager.getUserSession();
+      
+      if (userSession != null) {
+        print('🚀 SplashScreen - Found existing session: $userSession');
+        // User is already logged in
+        if (userSession.profileComplete) {
+          print('🚀 SplashScreen - Profile complete, navigating to MainNavigation');
+          // Navigate to home page if profile is complete
+          Navigator.of(context).pushReplacement(
+            PageRouteBuilder(
+              pageBuilder: (context, animation, secondaryAnimation) =>
+                  MainNavigation(
+                    userId: userSession.userId,
+                    userName: userSession.userName,
+                    userEmail: userSession.userEmail,
+                  ),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                return FadeTransition(opacity: animation, child: child);
+              },
+              transitionDuration: const Duration(milliseconds: 500),
+            ),
+          );
+        } else {
+          print('🚀 SplashScreen - Profile incomplete, navigating to AccountInfoPage');
+          // Navigate to account info page if profile needs completion
+          Navigator.of(context).pushReplacement(
+            PageRouteBuilder(
+              pageBuilder: (context, animation, secondaryAnimation) =>
+                  AccountInfoPage(
+                    userId: userSession.userId,
+                    userName: userSession.userName,
+                    userEmail: userSession.userEmail,
+                  ),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                return FadeTransition(opacity: animation, child: child);
+              },
+              transitionDuration: const Duration(milliseconds: 500),
+            ),
+          );
+        }
+      } else {
+        print('🚀 SplashScreen - No existing session, navigating to EmailVerificationPage');
+        // No existing session, navigate to login flow
+        Navigator.of(context).pushReplacement(
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                EmailVerificationPage(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+            transitionDuration: const Duration(milliseconds: 500),
+          ),
+        );
+      }
     }
   }
 

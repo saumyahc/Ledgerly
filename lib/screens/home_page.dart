@@ -1,7 +1,7 @@
 // home_page.dart
 import 'package:flutter/material.dart';
 import '../theme.dart';
-import 'user_profile_view.dart';
+import '../services/session_manager.dart';
 
 class HomePage extends StatelessWidget {
   final int userId;
@@ -17,6 +17,9 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Extend session when user is on home page
+    SessionManager.extendSession();
+    
     return AnimatedBackground(
       child: TouchEffectOverlay(
         child: Scaffold(
@@ -30,10 +33,14 @@ class HomePage extends StatelessWidget {
             ),
             backgroundColor: AppColors.primary,
             elevation: 0,
+            automaticallyImplyLeading: false, // Explicitly disable back button
             actions: [
               IconButton(
                 icon: Icon(Icons.logout, color: Colors.white),
-                onPressed: () {
+                onPressed: () async {
+                  // Clear user session
+                  await SessionManager.clearUserSession();
+                  // Navigate to initial screen
                   Navigator.pushNamedAndRemoveUntil(
                     context,
                     '/',
@@ -162,14 +169,10 @@ class HomePage extends StatelessWidget {
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                           onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => UserProfileView(
-                                  userId: userId,
-                                  userName: userName,
-                                  userEmail: userEmail,
-                                ),
+                            // Profile access is now handled by bottom navigation
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Use the Profile tab in the bottom navigation'),
                               ),
                             );
                           },
@@ -203,53 +206,8 @@ class HomePage extends StatelessWidget {
               ),
             ),
           ),
-          bottomNavigationBar: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Container(
-              constraints: BoxConstraints(minHeight: 80),
-              child: Glass3DCard(
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildFooterItem(Icons.home, 'Home', true, context),
-                    _buildFooterItem(
-                      Icons.account_balance_wallet,
-                      'Wallet',
-                      false,
-                      context,
-                    ),
-                    _buildFooterItem(Icons.history, 'History', false, context),
-                    _buildFooterItem(Icons.person, 'Profile', false, context),
-                  ],
-                ),
-              ),
-            ),
-          ),
         ),
       ),
-    );
-  }
-
-  Widget _buildFooterItem(
-    IconData icon,
-    String label,
-    bool selected,
-    BuildContext context,
-  ) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: selected ? AppColors.primary : Colors.grey, size: 28),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: selected ? AppColors.primary : Colors.grey,
-            fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-      ],
     );
   }
 }

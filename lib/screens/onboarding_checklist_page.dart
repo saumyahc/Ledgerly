@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme.dart';
-import 'home_page.dart';
+import 'main_navigation.dart';
 
 class OnboardingChecklistPage extends StatefulWidget {
   final int userId;
@@ -114,7 +114,7 @@ class _OnboardingChecklistPageState extends State<OnboardingChecklistPage>
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => HomePage(
+            builder: (context) => MainNavigation(
               userId: widget.userId,
               userName: widget.userName,
               userEmail: widget.userEmail,

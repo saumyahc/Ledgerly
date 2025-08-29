@@ -26,13 +26,16 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     city VARCHAR(100) NULL,
     country VARCHAR(100) NULL,
     postal_code VARCHAR(20) NULL,
+    wallet_address VARCHAR(42) NULL,
+    wallet_created_at TIMESTAMP NULL,
     profile_completed BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     INDEX idx_user_id (user_id),
     INDEX idx_country (country),
-    INDEX idx_profile_completed (profile_completed)
+    INDEX idx_profile_completed (profile_completed),
+    INDEX idx_wallet_address (wallet_address)
 );
 
 -- OTP codes table
