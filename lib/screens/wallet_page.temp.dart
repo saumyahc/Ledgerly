@@ -135,32 +135,18 @@ class _WalletPageState extends State<WalletPage> {
       return;
     }
     
-    // Use Navigator.push instead of pushNamed for better error handling
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => Scaffold(
-          appBar: AppBar(title: Text('Email Payment')),
-          body: Center(
-            child: Text('Email Payment feature coming soon!'),
-          ),
-        ),
-      ),
+    Navigator.of(context).pushNamed(
+      '/email_payment',
+      arguments: {
+        'userId': widget.userId,
+        'userName': widget.userName,
+        'userEmail': widget.userEmail,
+      },
     );
   }
   
   void _navigateToContractDeployment() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => Scaffold(
-          appBar: AppBar(title: Text('Deploy Contract')),
-          body: Center(
-            child: Text('Contract deployment feature coming soon!'),
-          ),
-        ),
-      ),
-    );
+    Navigator.of(context).pushNamed('/deploy_contract');
   }
   
   Future<void> _connectWithMetaMask() async {
@@ -300,9 +286,11 @@ class _WalletPageState extends State<WalletPage> {
       
       if (result['success'] == true) {
         print('Wallet linked to account successfully: ${result['data']}');
+        // Show success toast or notification here if desired
         _showSuccess('Wallet linked to your account');
       } else {
         print('Failed to link wallet to account: ${result['error']}');
+        // Show a warning but don't block the user since wallet still works locally
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Note: Wallet works locally but server sync failed. Your wallet will be re-synced later.'),
@@ -313,6 +301,7 @@ class _WalletPageState extends State<WalletPage> {
       }
     } catch (e) {
       print('Error linking wallet to account: $e');
+      // Log the error for debugging but let the user continue
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Note: Your wallet works but backup to server failed. Will retry later.'),
@@ -385,107 +374,91 @@ class _WalletPageState extends State<WalletPage> {
   }
 
   Widget _buildBalanceCard() {
-    return Card(
-      elevation: 8,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.white,
-              Colors.grey.shade50,
-            ],
-          ),
-        ),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Total Balance',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Colors.grey[600],
-                  ),
+    return Glass3DCard(
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Total Balance',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Colors.grey[600],
                 ),
-                if (_walletAddress != null)
-                  GestureDetector(
-                    onTap: () {
-                      Clipboard.setData(ClipboardData(text: _walletAddress!));
-                      _showSuccess('Address copied to clipboard');
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '${_walletAddress!.substring(0, 6)}...${_walletAddress!.substring(_walletAddress!.length - 4)}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.primary,
-                              fontFamily: 'monospace',
-                            ),
+              ),
+              if (_walletAddress != null)
+                GestureDetector(
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: _walletAddress!));
+                    _showSuccess('Address copied to clipboard');
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '${_walletAddress!.substring(0, 6)}...${_walletAddress!.substring(_walletAddress!.length - 4)}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.primary,
+                            fontFamily: 'monospace',
                           ),
-                          const SizedBox(width: 4),
-                          Icon(Icons.copy, size: 12, color: AppColors.primary),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(Icons.copy, size: 12, color: AppColors.primary),
+                      ],
                     ),
                   ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  _balance.toStringAsFixed(6),
-                  style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
-                  ),
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  _selectedCurrency,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.bold,
-                  ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                _balance.toStringAsFixed(6),
+                style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
                 ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.account_balance_wallet,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                _selectedCurrency,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.account_balance_wallet,
+                color: _hasWallet ? Colors.green : Colors.orange,
+                size: 16,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                _hasWallet ? 'Wallet Connected' : 'No Wallet',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: _hasWallet ? Colors.green : Colors.orange,
-                  size: 16,
+                  fontWeight: FontWeight.w500,
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  _hasWallet ? 'Wallet Connected' : 'No Wallet',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: _hasWallet ? Colors.green : Colors.orange,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -545,41 +518,25 @@ class _WalletPageState extends State<WalletPage> {
     required String label,
     required VoidCallback onTap,
   }) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.white,
-                Colors.grey.shade100,
-              ],
+    return Neumorphic3DButton(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              color: AppColors.primary,
+              size: 28,
             ),
-          ),
-          child: Column(
-            children: [
-              Icon(
-                icon,
-                color: AppColors.primary,
-                size: 28,
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
               ),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -772,50 +729,36 @@ class _WalletPageState extends State<WalletPage> {
             ),
             TextButton(
               onPressed: () {
-                // Navigate to history tab in main navigation
-                Navigator.of(context).pushNamed('/main_navigation', arguments: {
-                  'userId': widget.userId,
-                  'userName': widget.userName,
-                  'userEmail': widget.userEmail,
-                  'initialIndex': 2, // History tab index
-                });
+                // Navigate to history page with user data
+                Navigator.of(context).pushNamed(
+                  '/history',
+                  arguments: {
+                    'userId': widget.userId,
+                    'userName': widget.userName,
+                    'userEmail': widget.userEmail,
+                  },
+                );
               },
               child: const Text('View All'),
             ),
           ],
         ),
         const SizedBox(height: 16),
-        Card(
-          elevation: 4,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Colors.white,
-                  Colors.grey.shade50,
-                ],
-              ),
-            ),
-            child: _recentTransactions.isEmpty 
-              ? const Padding(
-                  padding: EdgeInsets.all(24.0),
-                  child: Center(
-                    child: Text(
-                      'No transactions yet.\nStart by receiving some ETH!',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey),
-                    ),
+        Glass3DCard(
+          child: _recentTransactions.isEmpty 
+            ? const Padding(
+                padding: EdgeInsets.all(24.0),
+                child: Center(
+                  child: Text(
+                    'No transactions yet.\nStart by receiving some ETH!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey),
                   ),
-                )
-              : Column(
-                  children: _recentTransactions.map((tx) => _buildTransactionItem(tx)).toList(),
                 ),
-          ),
+              )
+            : Column(
+                children: _recentTransactions.map((tx) => _buildTransactionItem(tx)).toList(),
+              ),
         ),
       ],
     );

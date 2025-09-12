@@ -1,32 +1,35 @@
 /**
- * Use this file to configure your truffle project. It's seeded with some
- * common settings for different networks and features like migrations,
- * compilation, and testing. Uncomment the ones you need or modify
- * them to suit your project as necessary.
- *
- * More information about configuration can be found at:
- *
- * https://trufflesuite.com/docs/truffle/reference/configuration
- *
- * Hands-off deployment with Infura
- * --------------------------------
- *
- * Do you have a complex application that requires lots of transactions to deploy?
- * Use this approach to make deployment a breeze 🏖️:
- *
- * Infura deployment needs a wallet provider (like @truffle/hdwallet-provider)
- * to sign transactions before they're sent to a remote public node.
- * Infura accounts are available for free at 🔍: https://infura.io/register
- *
- * You'll need a mnemonic - the twelve word phrase the wallet uses to generate
- * public/private key pairs. You can store your secrets 🤐 in a .env file.
- * In your project root, run `$ npm install dotenv`.
- * Create .env (which should be .gitignored) and declare your MNEMONIC
- * and Infura PROJECT_ID variables inside.
- * For example, your .env file will have the following structure:
- *
- * MNEMONIC = <Your 12 phrase mnemonic>
- * PROJECT_ID = <Your Infura project id>
+ * Ledgerly Truffle Configuration
+ * ==============================
+ * 
+ * This file configures your Truffle project for development and deployment.
+ * For MetaMask integration, we recommend using one of these approaches:
+ * 
+ * Option 1: Direct MetaMask Integration (Recommended)
+ * --------------------------------------------------
+ * 1. Compile your contracts: truffle compile
+ * 2. Run the script to extract artifacts: node extract-contract-data.js
+ * 3. Use the in-app contract deployment page to deploy with MetaMask
+ * 
+ * Option 2: Truffle + Infura + MetaMask
+ * ------------------------------------
+ * 1. Install HDWalletProvider: npm install @truffle/hdwallet-provider
+ * 2. Create a .env file with MNEMONIC and INFURA_API_KEY
+ * 3. Configure the network settings below with Infura endpoint
+ * 4. Run: truffle migrate --network sepolia
+ * 
+ * Option 3: Local Development with Ganache
+ * --------------------------------------
+ * 1. Install Ganache: https://trufflesuite.com/ganache/
+ * 2. Run Ganache and create a new workspace
+ * 3. Run: truffle migrate --network development
+ * 
+ * MetaMask Connection Instructions
+ * -------------------------------
+ * - Install MetaMask browser extension or mobile app
+ * - Create or import a wallet
+ * - Connect to desired network (Sepolia recommended for testing)
+ * - Fund your account with testnet ETH (https://sepoliafaucet.com/)
  *
  * Deployment with Truffle Dashboard (Recommended for best security practice)
  * --------------------------------------------------------------------------

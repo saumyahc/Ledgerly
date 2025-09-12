@@ -1,0 +1,230 @@
+# Ledgerly API Status Checker 🔍
+
+## 🌐 **Your Current API Configuration**
+
+Based on your `constants.dart`, your APIs are hosted at:
+**Base URL**: `https://ledgerly.hivizstudios.com/backend_example`
+
+## 📋 **API Endpoints to Test**
+
+### **1. Authentication APIs**
+- **Signup**: `https://ledgerly.hivizstudios.com/backend_example/signup.php`
+- **Send OTP**: `https://ledgerly.hivizstudios.com/backend_example/send_otp.php`
+- **Verify OTP**: `https://ledgerly.hivizstudios.com/backend_example/verify_otp.php`
+
+### **2. Profile Management APIs**
+- **Get Profile**: `https://ledgerly.hivizstudios.com/backend_example/get_profile.php`
+- **Save Profile**: `https://ledgerly.hivizstudios.com/backend_example/save_profile.php`
+
+### **3. Smart Contract APIs**
+- **Save Contract**: `https://ledgerly.hivizstudios.com/backend_example/save_contract.php`
+- **Get Contract**: `https://ledgerly.hivizstudios.com/backend_example/get_contract.php`
+
+### **4. Blockchain APIs**
+- **Email Payment**: `https://ledgerly.hivizstudios.com/backend_example/email_payment.php`
+- **Wallet API**: `https://ledgerly.hivizstudios.com/backend_example/wallet_api.php`
+
+### **5. Database Test**
+- **DB Test**: `https://ledgerly.hivizstudios.com/backend_example/test_db.php`
+
+---
+
+## 🧪 **How to Check API Status**
+
+### **Method 1: Browser Testing**
+Open these URLs in your browser:
+
+1. **Database Connection Test**:
+   ```
+   https://ledgerly.hivizstudios.com/backend_example/test_db.php
+   ```
+   **Expected**: "Connected successfully to database: u928134595_ledgerly_db"
+
+2. **Email Payment Test** (GET request):
+   ```
+   https://ledgerly.hivizstudios.com/backend_example/email_payment.php?email=test@example.com
+   ```
+   **Expected**: JSON response (success or error)
+
+### **Method 2: PowerShell/Command Line Testing**
+
+```powershell
+# Test database connection
+Invoke-WebRequest -Uri "https://ledgerly.hivizstudios.com/backend_example/test_db.php"
+
+# Test email resolution
+Invoke-WebRequest -Uri "https://ledgerly.hivizstudios.com/backend_example/email_payment.php?email=test@example.com"
+
+# Test signup endpoint (POST)
+$body = @{
+    name = "Test User"
+    email = "test@example.com"
+    password = "testpass123"
+} | ConvertTo-Json
+
+Invoke-WebRequest -Uri "https://ledgerly.hivizstudios.com/backend_example/signup.php" -Method POST -Body $body -ContentType "application/json"
+```
+
+### **Method 3: Create API Test Script**
+
+<function_calls>
+<invoke name="create_file">
+<parameter name="content"><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ledgerly API Status Checker</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .api-test { background: white; margin: 20px 0; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .status-ok { color: #28a745; font-weight: bold; }
+        .status-error { color: #dc3545; font-weight: bold; }
+        .test-button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 10px 5px 0 0; }
+        .test-button:hover { background: #0056b3; }
+        .response { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 15px; margin-top: 10px; white-space: pre-wrap; font-family: monospace; font-size: 12px; }
+        .loading { color: #6c757d; font-style: italic; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Ledgerly API Status Checker</h1>
+        <p>Base URL: <strong>https://ledgerly.hivizstudios.com/backend_example</strong></p>
+        
+        <div class="api-test">
+            <h3>📊 Database Connection Test</h3>
+            <button class="test-button" onclick="testAPI('test_db.php', 'GET')">Test Database</button>
+            <div id="test_db.php-status"></div>
+            <div id="test_db.php-response" class="response" style="display:none;"></div>
+        </div>
+
+        <div class="api-test">
+            <h3>📧 Email Payment API</h3>
+            <button class="test-button" onclick="testEmailAPI()">Test Email Resolution</button>
+            <div id="email_payment-status"></div>
+            <div id="email_payment-response" class="response" style="display:none;"></div>
+        </div>
+
+        <div class="api-test">
+            <h3>👤 User Signup API</h3>
+            <button class="test-button" onclick="testSignupAPI()">Test Signup</button>
+            <div id="signup-status"></div>
+            <div id="signup-response" class="response" style="display:none;"></div>
+        </div>
+
+        <div class="api-test">
+            <h3>👤 Profile API</h3>
+            <button class="test-button" onclick="testAPI('get_profile.php?user_id=1', 'GET')">Test Get Profile</button>
+            <div id="get_profile.php?user_id=1-status"></div>
+            <div id="get_profile.php?user_id=1-response" class="response" style="display:none;"></div>
+        </div>
+
+        <div class="api-test">
+            <h3>🔗 Smart Contract API</h3>
+            <button class="test-button" onclick="testAPI('get_contract.php?contract_name=EmailPaymentRegistry', 'GET')">Test Get Contract</button>
+            <div id="get_contract.php?contract_name=EmailPaymentRegistry-status"></div>
+            <div id="get_contract.php?contract_name=EmailPaymentRegistry-response" class="response" style="display:none;"></div>
+        </div>
+
+        <div class="api-test">
+            <h3>💳 Wallet API</h3>
+            <button class="test-button" onclick="testWalletAPI()">Test Wallet Linking</button>
+            <div id="wallet_api-status"></div>
+            <div id="wallet_api-response" class="response" style="display:none;"></div>
+        </div>
+
+        <div class="api-test">
+            <h3>🔄 Test All APIs</h3>
+            <button class="test-button" onclick="testAllAPIs()" style="background: #28a745;">Run All Tests</button>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = 'https://ledgerly.hivizstudios.com/backend_example';
+
+        async function testAPI(endpoint, method = 'GET', data = null) {
+            const statusDiv = document.getElementById(`${endpoint}-status`);
+            const responseDiv = document.getElementById(`${endpoint}-response`);
+            
+            statusDiv.innerHTML = '<div class="loading">Testing...</div>';
+            responseDiv.style.display = 'none';
+
+            try {
+                const options = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                };
+
+                if (data && method === 'POST') {
+                    options.body = JSON.stringify(data);
+                }
+
+                const response = await fetch(`${BASE_URL}/${endpoint}`, options);
+                const responseText = await response.text();
+
+                if (response.ok) {
+                    statusDiv.innerHTML = `<div class="status-ok">✅ API Working (${response.status})</div>`;
+                } else {
+                    statusDiv.innerHTML = `<div class="status-error">❌ API Error (${response.status})</div>`;
+                }
+
+                responseDiv.textContent = responseText;
+                responseDiv.style.display = 'block';
+
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="status-error">❌ Connection Failed: ${error.message}</div>`;
+                responseDiv.textContent = error.toString();
+                responseDiv.style.display = 'block';
+            }
+        }
+
+        async function testEmailAPI() {
+            await testAPI('email_payment.php?email=test@example.com', 'GET');
+        }
+
+        async function testSignupAPI() {
+            const testData = {
+                name: "Test User",
+                email: "test" + Date.now() + "@example.com",
+                password: "testpass123"
+            };
+            await testAPI('signup.php', 'POST', testData);
+        }
+
+        async function testWalletAPI() {
+            const testData = {
+                user_id: 1,
+                wallet_address: "0x1234567890123456789012345678901234567890"
+            };
+            await testAPI('wallet_api.php', 'POST', testData);
+        }
+
+        async function testAllAPIs() {
+            console.log('Testing all APIs...');
+            
+            // Test in sequence to avoid overwhelming the server
+            await testAPI('test_db.php', 'GET');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await testEmailAPI();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await testSignupAPI();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await testAPI('get_profile.php?user_id=1', 'GET');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await testAPI('get_contract.php?contract_name=EmailPaymentRegistry', 'GET');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await testWalletAPI();
+            
+            console.log('All API tests completed!');
+        }
+    </script>
+</body>
+</html>
