@@ -9,6 +9,26 @@ pragma solidity ^0.8.0;
 contract EmailPaymentRegistry {
     address public owner;
     
+    // Faucet configuration
+    uint256 public faucetAmount = 0.5 ether; // Welcome bonus: 0.5 ETH per new user
+    uint256 public faucetCooldown = 24 hours; // Once per day (prevents abuse)
+    mapping(address => uint256) public lastFaucetRequest;
+    mapping(address => bool) public hasReceivedWelcomeBonus; // Track welcome bonus
+    bool public faucetEnabled = true;
+    
+    // Faucet funding queue system
+    struct FaucetFunder {
+        address funderAddress;
+        uint256 contributedAmount;
+        uint256 contributedAt;
+        bool isActive;
+    }
+    
+    mapping(address => FaucetFunder) public faucetFunders;
+    address[] public funderQueue;
+    uint256 public totalFaucetContributions;
+    uint256 public minimumContribution = 0.1 ether; // Minimum to join faucet funding
+    
     // Mapping of keccak256 hashed emails to wallet addresses
     mapping(bytes32 => address) private emailToWallet;
     
@@ -28,6 +48,12 @@ contract EmailPaymentRegistry {
     event EmailRegistered(bytes32 indexed emailHash, address indexed wallet);
     event PaymentSent(bytes32 indexed fromEmailHash, bytes32 indexed toEmailHash, uint256 amount);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    event FaucetUsed(address indexed user, uint256 amount);
+    event WelcomeBonusGranted(address indexed user, uint256 amount);
+    event FaucetConfigured(uint256 amount, uint256 cooldown, bool enabled);
+    event FaucetFunded(address indexed funder, uint256 amount);
+    event FaucetFunderJoined(address indexed funder, uint256 contribution);
+    event FaucetFunderRemoved(address indexed funder);
     
     // Modifiers
     modifier onlyOwner() {
@@ -36,8 +62,284 @@ contract EmailPaymentRegistry {
     }
     
     // Constructor
-    constructor() {
+    constructor() payable {
         owner = msg.sender;
+    }
+    
+    // Allow contract to receive ETH
+    receive() external payable {}
+    fallback() external payable {}
+    
+    /**
+     * @dev Request welcome bonus for new users (one-time only)
+     */
+    function requestWelcomeBonus() public {
+        require(faucetEnabled, "Welcome bonus is disabled");
+        require(!hasReceivedWelcomeBonus[msg.sender], "Welcome bonus already claimed");
+        require(address(this).balance >= faucetAmount, "Insufficient funds for welcome bonus");
+        
+        // Mark as received and record timestamp
+        hasReceivedWelcomeBonus[msg.sender] = true;
+        lastFaucetRequest[msg.sender] = block.timestamp;
+        
+        // Send welcome bonus
+        (bool sent, ) = payable(msg.sender).call{value: faucetAmount}("");
+        require(sent, "Failed to send welcome bonus");
+        
+        emit FaucetUsed(msg.sender, faucetAmount);
+        emit WelcomeBonusGranted(msg.sender, faucetAmount);
+    }
+    
+    /**
+     * @dev Check if user is eligible for welcome bonus
+     */
+    function canRequestWelcomeBonus(address user) public view returns (bool) {
+        return faucetEnabled && !hasReceivedWelcomeBonus[user] && address(this).balance >= faucetAmount;
+    }
+
+    /**
+     * @dev Request test ETH from the faucet (development only)
+     */
+    function requestFaucetFunds() public {
+        require(faucetEnabled, "Faucet is disabled");
+        require(address(this).balance >= faucetAmount, "Faucet is empty");
+        require(
+            block.timestamp >= lastFaucetRequest[msg.sender] + faucetCooldown,
+            "Cooldown period not met"
+        );
+        
+        lastFaucetRequest[msg.sender] = block.timestamp;
+        
+        (bool sent, ) = payable(msg.sender).call{value: faucetAmount}("");
+        require(sent, "Failed to send faucet funds");
+        
+        emit FaucetUsed(msg.sender, faucetAmount);
+    }
+    
+    /**
+     * @dev Request specific amount from faucet
+     * @param amount Amount in wei to request
+     */
+    function requestFaucetAmount(uint256 amount) public {
+        require(faucetEnabled, "Faucet is disabled");
+        require(amount <= faucetAmount, "Amount exceeds faucet limit");
+        require(address(this).balance >= amount, "Faucet insufficient funds");
+        require(
+            block.timestamp >= lastFaucetRequest[msg.sender] + faucetCooldown,
+            "Cooldown period not met"
+        );
+        
+        lastFaucetRequest[msg.sender] = block.timestamp;
+        
+        (bool sent, ) = payable(msg.sender).call{value: amount}("");
+        require(sent, "Failed to send faucet funds");
+        
+        emit FaucetUsed(msg.sender, amount);
+    }
+    
+    /**
+     * @dev Request funds from the faucet funding queue (prioritizes queue over contract balance)
+     * @param amount Amount in wei to request (defaults to faucetAmount if 0)
+     */
+    function requestFromQueue(uint256 amount) public {
+        require(faucetEnabled, "Faucet is disabled");
+        require(
+            block.timestamp >= lastFaucetRequest[msg.sender] + faucetCooldown,
+            "Cooldown period not met"
+        );
+        
+        // Use default faucet amount if amount is 0
+        uint256 requestAmount = amount == 0 ? faucetAmount : amount;
+        require(requestAmount <= faucetAmount, "Amount exceeds faucet limit");
+        
+        // Check if we have enough in queue contributions or contract balance
+        require(address(this).balance >= requestAmount, "Insufficient funds available");
+        
+        lastFaucetRequest[msg.sender] = block.timestamp;
+        
+        // Transfer the requested amount
+        (bool sent, ) = payable(msg.sender).call{value: requestAmount}("");
+        require(sent, "Failed to send funds");
+        
+        emit FaucetUsed(msg.sender, requestAmount);
+    }
+    
+    /**
+     * @dev Request default faucet amount from queue
+     */
+    function requestFromQueueDefault() public {
+        requestFromQueue(0); // 0 means use default faucetAmount
+    }
+
+    /**
+     * @dev Configure faucet settings (owner only)
+     */
+    function configureFaucet(uint256 _amount, uint256 _cooldown, bool _enabled) public onlyOwner {
+        faucetAmount = _amount;
+        faucetCooldown = _cooldown;
+        faucetEnabled = _enabled;
+        
+        emit FaucetConfigured(_amount, _cooldown, _enabled);
+    }
+    
+    /**
+     * @dev Fund the faucet (owner only)
+     */
+    function fundFaucet() public payable onlyOwner {
+        // ETH sent with this transaction goes to the contract
+    }
+    
+    /**
+     * @dev Get faucet info
+     */
+    function getFaucetInfo() public view returns (uint256 amount, uint256 cooldown, bool enabled, uint256 balance) {
+        return (faucetAmount, faucetCooldown, faucetEnabled, address(this).balance);
+    }
+    
+    /**
+     * @dev Check if user can request faucet funds
+     */
+    function canRequestFaucet(address user) public view returns (bool, uint256 timeLeft) {
+        if (!faucetEnabled) return (false, 0);
+        if (address(this).balance < faucetAmount) return (false, 0);
+        
+        uint256 nextRequest = lastFaucetRequest[user] + faucetCooldown;
+        if (block.timestamp >= nextRequest) {
+            return (true, 0);
+        } else {
+            return (false, nextRequest - block.timestamp);
+        }
+    }
+    
+    /**
+     * @dev Join the faucet funding queue by contributing ETH
+     */
+    function joinFaucetFunding() public payable {
+        require(msg.value >= minimumContribution, "Contribution below minimum");
+        require(!faucetFunders[msg.sender].isActive, "Already in faucet funding queue");
+        
+        // Add to funder queue
+        faucetFunders[msg.sender] = FaucetFunder({
+            funderAddress: msg.sender,
+            contributedAmount: msg.value,
+            contributedAt: block.timestamp,
+            isActive: true
+        });
+        
+        funderQueue.push(msg.sender);
+        totalFaucetContributions += msg.value;
+        
+        emit FaucetFunderJoined(msg.sender, msg.value);
+        emit FaucetFunded(msg.sender, msg.value);
+    }
+    
+    /**
+     * @dev Add more funding to existing faucet contribution
+     */
+    function addFaucetFunding() public payable {
+        require(faucetFunders[msg.sender].isActive, "Not in faucet funding queue");
+        require(msg.value > 0, "Must send ETH");
+        
+        faucetFunders[msg.sender].contributedAmount += msg.value;
+        totalFaucetContributions += msg.value;
+        
+        emit FaucetFunded(msg.sender, msg.value);
+    }
+    
+    /**
+     * @dev Remove from faucet funding queue and withdraw contribution
+     */
+    function leaveFaucetFunding() public {
+        require(faucetFunders[msg.sender].isActive, "Not in faucet funding queue");
+        
+        uint256 contribution = faucetFunders[msg.sender].contributedAmount;
+        require(address(this).balance >= contribution, "Insufficient contract balance");
+        
+        // Mark as inactive
+        faucetFunders[msg.sender].isActive = false;
+        totalFaucetContributions -= contribution;
+        
+        // Remove from queue array
+        for (uint i = 0; i < funderQueue.length; i++) {
+            if (funderQueue[i] == msg.sender) {
+                funderQueue[i] = funderQueue[funderQueue.length - 1];
+                funderQueue.pop();
+                break;
+            }
+        }
+        
+        // Return contribution
+        (bool sent, ) = payable(msg.sender).call{value: contribution}("");
+        require(sent, "Failed to return contribution");
+        
+        emit FaucetFunderRemoved(msg.sender);
+    }
+    
+    /**
+     * @dev Get faucet funding queue information
+     */
+    function getFaucetFundingInfo() public view returns (
+        uint256 totalFunders,
+        uint256 totalContributions,
+        uint256 contractBalance,
+        uint256 minimumContrib
+    ) {
+        return (
+            funderQueue.length,
+            totalFaucetContributions,
+            address(this).balance,
+            minimumContribution
+        );
+    }
+    
+    /**
+     * @dev Get specific funder information
+     */
+    function getFunderInfo(address funder) public view returns (
+        uint256 contributedAmount,
+        uint256 contributedAt,
+        bool isActive
+    ) {
+        FaucetFunder memory funderInfo = faucetFunders[funder];
+        return (
+            funderInfo.contributedAmount,
+            funderInfo.contributedAt,
+            funderInfo.isActive
+        );
+    }
+    
+    /**
+     * @dev Get all active funders (limited to prevent gas issues)
+     */
+    function getActiveFunders() public view returns (address[] memory) {
+        uint256 activeCount = 0;
+        
+        // Count active funders
+        for (uint i = 0; i < funderQueue.length; i++) {
+            if (faucetFunders[funderQueue[i]].isActive) {
+                activeCount++;
+            }
+        }
+        
+        // Create array of active funders
+        address[] memory activeFunders = new address[](activeCount);
+        uint256 index = 0;
+        
+        for (uint i = 0; i < funderQueue.length; i++) {
+            if (faucetFunders[funderQueue[i]].isActive) {
+                activeFunders[index] = funderQueue[i];
+                index++;
+            }
+        }
+        
+        return activeFunders;
+    }
+    
+    /**
+     * @dev Set minimum contribution for faucet funding (owner only)
+     */
+    function setMinimumContribution(uint256 _minimumContribution) public onlyOwner {
+        minimumContribution = _minimumContribution;
     }
     
     /**

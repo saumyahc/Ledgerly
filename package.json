@@ -14,7 +14,17 @@
     "extract-contracts": "node extract-contract-data.js",
     "ganache": "ganache-cli --accounts 10 --host 0.0.0.0 --port 7545 --deterministic",
     "setup": "npm install && truffle compile",
-    "deploy-local": "npm run ganache & sleep 5 && truffle migrate --network development"
+    "start-ganache": "node scripts/start-ganache-windows.js",
+    "stop-ganache": "node scripts/stop-ganache.js",
+    "deploy": "node scripts/deploy-and-save.js",
+    "deploy:local": "cross-env NETWORK_MODE=local node scripts/deploy-and-save.js",
+    "deploy:testnet": "cross-env ENABLE_MAINNET=false node scripts/deploy-and-save.js",
+    "deploy:mainnet": "cross-env ENABLE_MAINNET=true node scripts/deploy-and-save.js",
+    "extract-only": "node extract-contract-info.js",
+    "test-backend": "node scripts/test-backend-connection.js",
+    "fund": "node scripts/fund-accounts.js",
+    "funding-server": "node scripts/funding-server.js",
+    "dev": "node scripts/start-dev.js"
   },
   "keywords": [
     "blockchain",
@@ -30,13 +40,17 @@
   "license": "MIT",
   "devDependencies": {
     "@truffle/hdwallet-provider": "^2.1.15",
+    "cross-env": "^10.0.0",
     "ganache-cli": "^6.12.2",
     "hardhat": "^3.0.6",
+    "node-fetch": "^2.6.7",
     "truffle": "^5.11.5",
     "web3": "^1.10.4"
   },
   "dependencies": {
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
   },
   "engines": {
     "node": ">=16.0.0",

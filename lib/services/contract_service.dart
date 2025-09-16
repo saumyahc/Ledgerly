@@ -1,497 +1,274 @@
-import 'dart:convert';
-import 'package:flutter/material.dart';
+import 'package:web3dart/web3dart.dart';
 import 'package:http/http.dart' as http;
-import 'package:crypto/crypto.dart' as crypto;
-import '../constants.dart';
-import 'metamask_service.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'dynamic_contract_config.dart';
 
-// Access to the ASCII encoder
-final ascii = AsciiCodec();
-
-/// Service for interacting with the EmailPaymentRegistry smart contract
+/// Simple service to interact with deployed EmailPaymentRegistry contract
 class ContractService {
-  // Singleton instance
-  static final ContractService _instance = ContractService._internal();
-  factory ContractService() => _instance;
-  ContractService._internal();
+  late Web3Client _client;
+  late DeployedContract _contract;
+  late EthereumAddress _contractAddress;
+  late DynamicContractConfig _contractConfig;
   
-  // Services
-  final MetaMaskService _metamaskService = MetaMaskService();
+  bool _isInitialized = false;
   
-  // Contract ABI (Application Binary Interface)
-  // This is a simplified ABI for the EmailPaymentRegistry contract - kept for reference
-  static const String contractAbi = '''
-[
-  {
-    "inputs": [],
-    "stateMutability": "nonpayable",
-    "type": "constructor"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "bytes32",
-        "name": "emailHash",
-        "type": "bytes32"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "wallet",
-        "type": "address"
-      }
-    ],
-    "name": "EmailRegistered",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "previousOwner",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "newOwner",
-        "type": "address"
-      }
-    ],
-    "name": "OwnershipTransferred",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "bytes32",
-        "name": "fromEmailHash",
-        "type": "bytes32"
-      },
-      {
-        "indexed": true,
-        "internalType": "bytes32",
-        "name": "toEmailHash",
-        "type": "bytes32"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "PaymentSent",
-    "type": "event"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "emailHash",
-        "type": "bytes32"
-      },
-      {
-        "internalType": "address",
-        "name": "newWallet",
-        "type": "address"
-      }
-    ],
-    "name": "adminOverrideEmail",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "email",
-        "type": "string"
-      }
-    ],
-    "name": "computeEmailHash",
-    "outputs": [
-      {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
-    ],
-    "stateMutability": "pure",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "emailHash",
-        "type": "bytes32"
-      }
-    ],
-    "name": "getWalletByEmail",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "emailHash",
-        "type": "bytes32"
-      }
-    ],
-    "name": "getUserProfile",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "wallet",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "registeredAt",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "lastUpdatedAt",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "totalReceived",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "totalSent",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "owner",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "emailHash",
-        "type": "bytes32"
-      },
-      {
-        "internalType": "address",
-        "name": "wallet",
-        "type": "address"
-      }
-    ],
-    "name": "registerEmail",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "fromEmailHash",
-        "type": "bytes32"
-      },
-      {
-        "internalType": "bytes32",
-        "name": "toEmailHash",
-        "type": "bytes32"
-      }
-    ],
-    "name": "sendPaymentByEmail",
-    "outputs": [],
-    "stateMutability": "payable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "toEmailHash",
-        "type": "bytes32"
-      }
-    ],
-    "name": "sendPaymentToEmail",
-    "outputs": [],
-    "stateMutability": "payable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "newOwner",
-        "type": "address"
-      }
-    ],
-    "name": "transferOwnership",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "withdraw",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  }
-]
-  ''';
-
-  /// Calculate email hash the same way the contract does
-  String hashEmail(String email) {
-    return '0x${crypto.sha256.convert(utf8.encode(email)).toString()}';
-  }
-  
-  /// Helper function to simulate keccak256 hashing (normally provided by web3dart)
-  String keccak256(List<int> input) {
-    // In a real implementation, you'd use a proper keccak256 library
-    // For now, we'll use SHA-256 as a placeholder
-    return crypto.sha256.convert(input).toString();
-  }
-
-  /// Register an email with a wallet address
-  Future<Map<String, dynamic>> registerEmail({
-    required BuildContext context,
-    required String email,
-  }) async {
-    try {
-      // First connect the wallet if not connected
-      if (!_metamaskService.isConnected) {
-        final address = await _metamaskService.connect(context);
-        if (address == null) {
-          return {
-            'success': false,
-            'error': 'Failed to connect wallet',
-          };
-        }
-      }
-
-      // Generate the function call data for registerEmail
-      final emailHash = hashEmail(email);
-      final functionSignature = 'registerEmail(bytes32,address)';
-      final functionSelector = '0x' + keccak256(ascii.encode(functionSignature)).substring(0, 8);
-      
-      // Encode parameters
-      final encodedEmailHash = emailHash.padRight(66, '0'); // bytes32 parameter
-      final encodedWalletAddress = _metamaskService.connectedAddress!.padRight(66, '0'); // address parameter
-      
-      final data = '$functionSelector$encodedEmailHash$encodedWalletAddress';
-      
-      // Send transaction via MetaMask
-      final txHash = await _metamaskService.sendTransaction(
-        context: context,
-        to: ApiConstants.emailPaymentRegistryAddress,
-        value: '0x0', // No ETH being sent
-        data: data,
-      );
-      
-      if (txHash == null) {
-        return {
-          'success': false,
-          'error': 'Transaction rejected',
-        };
-      }
-      
-      return {
-        'success': true,
-        'txHash': txHash,
-      };
-    } catch (e) {
-      return {
-        'success': false,
-        'error': 'Error registering email: $e',
-      };
+  /// Initialize contract connection using dynamic configuration
+  Future<void> initialize() async {
+    if (_isInitialized) return;
+    
+    // Load environment
+    await dotenv.load();
+    
+    // Initialize dynamic contract config
+    _contractConfig = DynamicContractConfig.instance;
+    
+    // Get RPC URL based on network mode
+    String rpcUrl;
+    if (dotenv.env['NETWORK_MODE'] == 'local') {
+      rpcUrl = dotenv.env['LOCAL_RPC_URL'] ?? 'http://127.0.0.1:8545';
+    } else {
+      rpcUrl = dotenv.env['ETHEREUM_RPC_URL'] ?? '';
     }
+    
+    if (rpcUrl.isEmpty) {
+      throw Exception('RPC URL not configured');
+    }
+    
+    // Create Web3 client
+    _client = Web3Client(rpcUrl, http.Client());
+    
+    // Load contract from dynamic config
+    final contractAddress = await _contractConfig.contractAddress;
+    final contractAbi = await _contractConfig.abi;
+    final contractName = await _contractConfig.contractName;
+    
+    _contractAddress = EthereumAddress.fromHex(contractAddress);
+    final abi = ContractAbi.fromJson(contractAbi, contractName);
+    _contract = DeployedContract(abi, _contractAddress);
+    
+    _isInitialized = true;
+    print('✅ Contract service initialized');
+    print('   Address: $contractAddress');
+    print('   Network: ${dotenv.env['NETWORK_MODE']}');
+    print('   Config source: ${await _contractConfig.isBackendAvailable() ? "Backend" : "Fallback"}');
   }
-
-  /// Send payment to an email
+  
+  /// Send payment to email address via smart contract
   Future<Map<String, dynamic>> sendPaymentToEmail({
-    required BuildContext context,
-    required String toEmail,
-    required String amount, // In ETH
+    required String email,
+    required double amount,
+    required Credentials credentials,
+    String? memo,
   }) async {
+    await initialize();
+    
     try {
-      // First connect the wallet if not connected
-      if (!_metamaskService.isConnected) {
-        final address = await _metamaskService.connect(context);
-        if (address == null) {
-          return {
-            'success': false,
-            'error': 'Failed to connect wallet',
-          };
-        }
-      }
-
-      // Calculate email hash
-      final toEmailHash = hashEmail(toEmail);
+      // Convert email to bytes32 hash (simple approach)
+      final emailBytes = email.toLowerCase().trim().codeUnits;
+      final emailHash = emailBytes.take(32).toList();
+      while (emailHash.length < 32) emailHash.add(0);
       
-      // Generate the function call data for sendPaymentToEmail
-      final functionSignature = 'sendPaymentToEmail(bytes32)';
-      final functionSelector = '0x' + keccak256(ascii.encode(functionSignature)).substring(0, 8);
+      // Convert amount to wei
+      final amountWei = EtherAmount.fromUnitAndValue(EtherUnit.ether, amount);
       
-      // Encode parameters
-      final encodedEmailHash = toEmailHash.padRight(66, '0'); // bytes32 parameter
+      // Get contract function
+      final function = _contract.function('sendPaymentToEmail');
       
-      final data = '$functionSelector$encodedEmailHash';
-      
-      // Convert ETH to Wei
-      final amountWei = BigInt.from(double.parse(amount) * 1e18).toString();
-      
-      // Send transaction via MetaMask
-      final txHash = await _metamaskService.sendTransaction(
-        context: context,
-        to: ApiConstants.emailPaymentRegistryAddress,
-        value: '0x$amountWei', // ETH amount in wei, converted to hex
-        data: data,
+      // Create transaction
+      final transaction = Transaction.callContract(
+        contract: _contract,
+        function: function,
+        parameters: [emailHash],
+        value: amountWei,
       );
       
-      if (txHash == null) {
-        return {
-          'success': false,
-          'error': 'Transaction rejected',
-        };
-      }
+      // Send transaction
+      final chainId = await _contractConfig.chainId;
+      final txHash = await _client.sendTransaction(
+        credentials,
+        transaction,
+        chainId: chainId,
+      );
       
       return {
         'success': true,
         'txHash': txHash,
+        'message': 'Payment sent via smart contract'
       };
     } catch (e) {
       return {
         'success': false,
-        'error': 'Error sending payment: $e',
+        'error': e.toString()
       };
     }
   }
-
-  /// Send payment from one email to another (for users with both emails registered)
-  Future<Map<String, dynamic>> sendPaymentBetweenEmails({
-    required BuildContext context,
-    required String fromEmail,
-    required String toEmail,
-    required String amount, // In ETH
-  }) async {
-    try {
-      // First connect the wallet if not connected
-      if (!_metamaskService.isConnected) {
-        final address = await _metamaskService.connect(context);
-        if (address == null) {
-          return {
-            'success': false,
-            'error': 'Failed to connect wallet',
-          };
-        }
-      }
-
-      // Calculate email hashes
-      final fromEmailHash = hashEmail(fromEmail);
-      final toEmailHash = hashEmail(toEmail);
-      
-      // Generate the function call data for sendPaymentByEmail
-      final functionSignature = 'sendPaymentByEmail(bytes32,bytes32)';
-      final functionSelector = '0x' + keccak256(ascii.encode(functionSignature)).substring(0, 8);
-      
-      // Encode parameters
-      final encodedFromEmailHash = fromEmailHash.padRight(66, '0'); // bytes32 parameter
-      final encodedToEmailHash = toEmailHash.padRight(66, '0'); // bytes32 parameter
-      
-      final data = '$functionSelector$encodedFromEmailHash$encodedToEmailHash';
-      
-      // Convert ETH to Wei
-      final amountWei = BigInt.from(double.parse(amount) * 1e18).toString();
-      
-      // Send transaction via MetaMask
-      final txHash = await _metamaskService.sendTransaction(
-        context: context,
-        to: ApiConstants.emailPaymentRegistryAddress,
-        value: '0x$amountWei', // ETH amount in wei, converted to hex
-        data: data,
-      );
-      
-      if (txHash == null) {
-        return {
-          'success': false,
-          'error': 'Transaction rejected',
-        };
-      }
-      
-      return {
-        'success': true,
-        'txHash': txHash,
-      };
-    } catch (e) {
-      return {
-        'success': false,
-        'error': 'Error sending payment: $e',
-      };
-    }
-  }
-
-  /// Lookup a wallet address by email
+  
+  /// Look up wallet address for email
   Future<Map<String, dynamic>> lookupEmailWallet(String email) async {
+    await initialize();
+    
     try {
-      // First check our backend API
-      final apiResponse = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}/email_payment.php?email=$email'),
+      // Convert email to bytes32 hash
+      final emailBytes = email.toLowerCase().trim().codeUnits;
+      final emailHash = emailBytes.take(32).toList();
+      while (emailHash.length < 32) emailHash.add(0);
+      
+      // Get contract function
+      final function = _contract.function('getWalletByEmail');
+      
+      // Call contract
+      final result = await _client.call(
+        contract: _contract,
+        function: function,
+        params: [emailHash],
       );
       
-      if (apiResponse.statusCode == 200) {
-        final apiData = json.decode(apiResponse.body);
-        if (apiData['success'] == true && apiData['user'] != null) {
+      if (result.isNotEmpty) {
+        final address = result.first as EthereumAddress;
+        final addressHex = address.hex;
+        
+        // Check if it's a valid registered address (not zero address)
+        if (addressHex != '0x0000000000000000000000000000000000000000') {
           return {
             'success': true,
-            'wallet': apiData['user']['wallet_address'],
-            'source': 'api',
+            'wallet': addressHex
           };
         }
       }
       
-      // If not found in API, query the smart contract
-      // This would require a connection to a node - for production you'd need
-      // to use Infura or another provider for read-only operations
-      
       return {
         'success': false,
-        'error': 'Email not registered',
+        'error': 'Email not registered on contract'
       };
     } catch (e) {
       return {
         'success': false,
-        'error': 'Error looking up email: $e',
+        'error': e.toString()
       };
     }
+  }
+  
+  /// Register current wallet with email
+  Future<Map<String, dynamic>> registerEmail({
+    required String email,
+    required Credentials credentials,
+  }) async {
+    await initialize();
+    
+    try {
+      // Convert email to bytes32 hash
+      final emailBytes = email.toLowerCase().trim().codeUnits;
+      final emailHash = emailBytes.take(32).toList();
+      while (emailHash.length < 32) emailHash.add(0);
+      
+      // Get wallet address
+      final walletAddress = await credentials.extractAddress();
+      
+      // Get contract function
+      final function = _contract.function('registerEmail');
+      
+      // Create transaction
+      final transaction = Transaction.callContract(
+        contract: _contract,
+        function: function,
+        parameters: [emailHash, walletAddress],
+      );
+      
+      // Send transaction
+      final chainId = await _contractConfig.chainId;
+      final txHash = await _client.sendTransaction(
+        credentials,
+        transaction,
+        chainId: chainId,
+      );
+      
+      return {
+        'success': true,
+        'txHash': txHash,
+        'message': 'Email registered successfully'
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'error': e.toString()
+      };
+    }
+  }
+  
+  /// Get contract events (payments, registrations)
+  Future<List<Map<String, dynamic>>> getRecentEvents({int? fromBlock}) async {
+    await initialize();
+    
+    try {
+      final events = <Map<String, dynamic>>[];
+      
+      // Get payment events
+      final paymentEvent = _contract.event('PaymentSent');
+      final paymentLogs = await _client.getLogs(FilterOptions.events(
+        contract: _contract,
+        event: paymentEvent,
+        fromBlock: fromBlock != null ? BlockNum.exact(fromBlock) : null,
+      ));
+      
+      for (final log in paymentLogs) {
+        final decoded = paymentEvent.decodeResults(log.topics!, log.data!);
+        events.add({
+          'type': 'payment',
+          'txHash': log.transactionHash,
+          'blockNumber': log.blockNum,
+          'data': decoded,
+        });
+      }
+      
+      // Get registration events
+      final registrationEvent = _contract.event('EmailRegistered');
+      final registrationLogs = await _client.getLogs(FilterOptions.events(
+        contract: _contract,
+        event: registrationEvent,
+        fromBlock: fromBlock != null ? BlockNum.exact(fromBlock) : null,
+      ));
+      
+      for (final log in registrationLogs) {
+        final decoded = registrationEvent.decodeResults(log.topics!, log.data!);
+        events.add({
+          'type': 'registration',
+          'txHash': log.transactionHash,
+          'blockNumber': log.blockNum,
+          'data': decoded,
+        });
+      }
+      
+      // Sort by block number (newest first)
+      events.sort((a, b) => b['blockNumber'].compareTo(a['blockNumber']));
+      
+      return events;
+    } catch (e) {
+      print('Error getting events: $e');
+      return [];
+    }
+  }
+  
+  /// Refresh contract configuration from backend
+  Future<void> refreshConfig() async {
+    _contractConfig.clearCache();
+    _isInitialized = false;
+    await initialize();
+  }
+  
+  /// Get contract configuration info for debugging
+  Future<Map<String, dynamic>> getConfigInfo() async {
+    return await _contractConfig.getConfigInfo();
+  }
+  
+  /// Check if backend configuration is available
+  Future<bool> isBackendAvailable() async {
+    return await _contractConfig.isBackendAvailable();
+  }
+  
+  /// Get current contract address
+  String get contractAddress => _contractAddress.hex;
+  
+  void dispose() {
+    _client.dispose();
   }
 }

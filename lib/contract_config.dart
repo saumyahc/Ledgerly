@@ -1,180 +1,21 @@
-// Contract Configuration for Ledgerly
-// Update these addresses after deploying contracts with 'truffle migrate'
+
+// GENERATED FILE - DO NOT EDIT MANUALLY
+// Generated at: 2025-09-14T10:56:23.080Z
+// Contract Version: v1757847377487-80648a3
 
 class ContractConfig {
-  // ✅ UPDATED AFTER DEPLOYMENT
-  static const String emailPaymentRegistryAddress = "0x7c28a30fb917e6ab5990ef99f86cb90083fa2b99"; // Updated to deployed contract address
+  static const String contractName = 'EmailPaymentRegistry';
+  static const String contractAddress = '0x5017A545b09ab9a30499DE7F431DF0855bCb7275';
+  static const int chainId = 5777;
+  static const String deploymentTx = '0xe8b0d8de5117abf4c451b3127feb8257f44636b93267f81c9cc4a17fa2af2af0';
+  static const String version = 'v1757847377487-80648a3';
+  static const String networkMode = 'local';
   
-  // Local development network configuration
-  static const String localRpcUrl = "http://10.0.2.2:7545"; // For Android Emulator
-  static const String localRpcUrlIOS = "http://127.0.0.1:7545"; // For iOS Simulator
-  static const String localRpcUrlDesktop = "http://127.0.0.1:7545"; // For Desktop/Web
-  static const int localChainId = 1337; // Ganache default
+  static const String abi = '''[{"inputs":[],"stateMutability":"payable","type":"constructor","payable":true},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"bytes32","name":"emailHash","type":"bytes32"},{"indexed":true,"internalType":"address","name":"wallet","type":"address"}],"name":"EmailRegistered","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"cooldown","type":"uint256"},{"indexed":false,"internalType":"bool","name":"enabled","type":"bool"}],"name":"FaucetConfigured","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"funder","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"FaucetFunded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"funder","type":"address"},{"indexed":false,"internalType":"uint256","name":"contribution","type":"uint256"}],"name":"FaucetFunderJoined","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"funder","type":"address"}],"name":"FaucetFunderRemoved","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"FaucetUsed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"bytes32","name":"fromEmailHash","type":"bytes32"},{"indexed":true,"internalType":"bytes32","name":"toEmailHash","type":"bytes32"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"PaymentSent","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"WelcomeBonusGranted","type":"event"},{"stateMutability":"payable","type":"fallback","payable":true},{"inputs":[],"name":"faucetAmount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function","constant":true},{"inputs":[],"name":"faucetCooldown","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function","constant":true},{"inputs":[],"name":"faucetEnabled","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function","constant":true},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"faucetFunders","outputs":[{"internalType":"address","name":"funderAddress","type":"address"},{"internalType":"uint256","name":"contributedAmount","type":"uint256"},{"internalType":"uint256","name":"contributedAt","type":"uint256"},{"internalType":"bool","name":"isActive","type":"bool"}],"stateMutability":"view","type":"function","constant":true},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"funderQueue","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function","constant":true},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"hasReceivedWelcomeBonus","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function","constant":true},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"lastFaucetRequest","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function","constant":true},{"inputs":[],"name":"minimumContribution","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function","constant":true},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function","constant":true},{"inputs":[],"name":"totalFaucetContributions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function","constant":true},{"stateMutability":"payable","type":"receive","payable":true},{"inputs":[],"name":"requestWelcomeBonus","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"canRequestWelcomeBonus","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function","constant":true},{"inputs":[],"name":"requestFaucetFunds","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"requestFaucetAmount","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"requestFromQueue","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"requestFromQueueDefault","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"_amount","type":"uint256"},{"internalType":"uint256","name":"_cooldown","type":"uint256"},{"internalType":"bool","name":"_enabled","type":"bool"}],"name":"configureFaucet","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"fundFaucet","outputs":[],"stateMutability":"payable","type":"function","payable":true},{"inputs":[],"name":"getFaucetInfo","outputs":[{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"uint256","name":"cooldown","type":"uint256"},{"internalType":"bool","name":"enabled","type":"bool"},{"internalType":"uint256","name":"balance","type":"uint256"}],"stateMutability":"view","type":"function","constant":true},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"canRequestFaucet","outputs":[{"internalType":"bool","name":"","type":"bool"},{"internalType":"uint256","name":"timeLeft","type":"uint256"}],"stateMutability":"view","type":"function","constant":true},{"inputs":[],"name":"joinFaucetFunding","outputs":[],"stateMutability":"payable","type":"function","payable":true},{"inputs":[],"name":"addFaucetFunding","outputs":[],"stateMutability":"payable","type":"function","payable":true},{"inputs":[],"name":"leaveFaucetFunding","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"getFaucetFundingInfo","outputs":[{"internalType":"uint256","name":"totalFunders","type":"uint256"},{"internalType":"uint256","name":"totalContributions","type":"uint256"},{"internalType":"uint256","name":"contractBalance","type":"uint256"},{"internalType":"uint256","name":"minimumContrib","type":"uint256"}],"stateMutability":"view","type":"function","constant":true},{"inputs":[{"internalType":"address","name":"funder","type":"address"}],"name":"getFunderInfo","outputs":[{"internalType":"uint256","name":"contributedAmount","type":"uint256"},{"internalType":"uint256","name":"contributedAt","type":"uint256"},{"internalType":"bool","name":"isActive","type":"bool"}],"stateMutability":"view","type":"function","constant":true},{"inputs":[],"name":"getActiveFunders","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function","constant":true},{"inputs":[{"internalType":"uint256","name":"_minimumContribution","type":"uint256"}],"name":"setMinimumContribution","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"bytes32","name":"emailHash","type":"bytes32"},{"internalType":"address","name":"wallet","type":"address"}],"name":"registerEmail","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"bytes32","name":"emailHash","type":"bytes32"}],"name":"getWalletByEmail","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function","constant":true},{"inputs":[{"internalType":"bytes32","name":"emailHash","type":"bytes32"}],"name":"getUserProfile","outputs":[{"internalType":"address","name":"wallet","type":"address"},{"internalType":"uint256","name":"registeredAt","type":"uint256"},{"internalType":"uint256","name":"lastUpdatedAt","type":"uint256"},{"internalType":"uint256","name":"totalReceived","type":"uint256"},{"internalType":"uint256","name":"totalSent","type":"uint256"}],"stateMutability":"view","type":"function","constant":true},{"inputs":[{"internalType":"bytes32","name":"fromEmailHash","type":"bytes32"},{"internalType":"bytes32","name":"toEmailHash","type":"bytes32"}],"name":"sendPaymentByEmail","outputs":[],"stateMutability":"payable","type":"function","payable":true},{"inputs":[{"internalType":"bytes32","name":"toEmailHash","type":"bytes32"}],"name":"sendPaymentToEmail","outputs":[],"stateMutability":"payable","type":"function","payable":true},{"inputs":[{"internalType":"string","name":"email","type":"string"}],"name":"computeEmailHash","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"pure","type":"function","constant":true},{"inputs":[],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"bytes32","name":"emailHash","type":"bytes32"},{"internalType":"address","name":"newWallet","type":"address"}],"name":"adminOverrideEmail","outputs":[],"stateMutability":"nonpayable","type":"function"}]''';
   
-  // Get the correct RPC URL based on platform
-  static String getRpcUrl() {
-    // You can add platform detection here if needed
-    // For now, return the Android emulator URL as default
-    return localRpcUrl;
-  }
-  
-  // Network configurations
-  static const Map<String, Map<String, dynamic>> networks = {
-    'local': {
-      'name': 'Local Development',
-      'rpcUrl': localRpcUrl,
-      'chainId': localChainId,
-      'symbol': 'ETH',
-      'blockExplorer': null,
-      'contractAddress': emailPaymentRegistryAddress,
-    },
-    'sepolia': {
-      'name': 'Sepolia Testnet',
-      'rpcUrl': 'https://sepolia.infura.io/v3/YOUR_INFURA_KEY',
-      'chainId': 11155111,
-      'symbol': 'ETH',
-      'blockExplorer': 'https://sepolia.etherscan.io',
-      'contractAddress': null, // Deploy to testnet later
-    },
-  };
-  
-  // Current active network
-  static const String activeNetwork = 'local'; // Change to 'sepolia' for testnet
-  
-  // Get current network config
-  static Map<String, dynamic> get currentNetwork => networks[activeNetwork]!;
-  
-  // Validation
-  static bool get isConfigured => emailPaymentRegistryAddress != "0x...";
-  
-  // Instructions for setup
-  static const String setupInstructions = '''
-📋 Contract Setup Instructions:
-
-1. Start Ganache: ganache-cli --accounts 10 --host 0.0.0.0 --port 7545 --deterministic
-2. Deploy contracts: truffle migrate --network development
-3. Copy the EmailPaymentRegistry address from the migration output
-4. Update emailPaymentRegistryAddress in this file
-5. Restart your Flutter app
-
-Example migration output:
-Deploying 'EmailPaymentRegistry'
-   > transaction hash:    0x...
-   > contract address:    0x1234567890123456789012345678901234567890  <-- Copy this address
-   > block number:        2
-   > account:             0x...
-   > balance:             99.99 ETH
-   > gas used:            1234567
-   > gas price:           20 gwei
-   > value sent:          0 ETH
-   > total cost:          0.01 ETH
-''';
-}
-
-// ABI for EmailPaymentRegistry contract
-// This will be automatically generated after compilation
-class ContractABI {
-  static const String emailPaymentRegistry = '''
-[
-  {
-    "inputs": [],
-    "stateMutability": "nonpayable",
-    "type": "constructor"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "bytes32",
-        "name": "emailHash",
-        "type": "bytes32"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "wallet",
-        "type": "address"
-      }
-    ],
-    "name": "EmailRegistered",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "bytes32",
-        "name": "fromEmailHash",
-        "type": "bytes32"
-      },
-      {
-        "indexed": true,
-        "internalType": "bytes32",
-        "name": "toEmailHash",
-        "type": "bytes32"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "PaymentSent",
-    "type": "event"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "email",
-        "type": "string"
-      }
-    ],
-    "name": "registerEmail",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "toEmail",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "fromEmail",
-        "type": "string"
-      }
-    ],
-    "name": "sendPaymentToEmail",
-    "outputs": [],
-    "stateMutability": "payable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "email",
-        "type": "string"
-      }
-    ],
-    "name": "getWalletFromEmail",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  }
-]
-''';
+  // Deployment metadata
+  static const String deployedAt = '2025-09-14T10:56:17.486Z';
+  static const bool isMainnet = false;
+  static const bool isTestnet = false;
+  static const bool isLocal = true;
 }

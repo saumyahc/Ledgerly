@@ -53,3 +53,10 @@ android/.gradle
 
 linux/flutter
 windows/flutter
+
+# Ganache blockchain data
+ganache-db/
+
+# iOS build artifacts
+ios/
+android/local.properties

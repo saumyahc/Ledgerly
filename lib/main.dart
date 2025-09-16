@@ -7,8 +7,8 @@ import 'screens/signup_page.dart';
 import 'screens/email_verification.dart';
 import 'screens/home_page.dart';
 import 'screens/wallet_page.dart';
-import 'screens/contract_deployment_page.dart';
-import 'screens/metamask_email_payment_page.dart';
+import 'screens/email_payment_page.dart'; // Add this import
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -68,19 +68,16 @@ class LedgerlyApp extends StatelessWidget {
             
           case '/email_payment':
             return MaterialPageRoute(
-              // Using MetaMask email payment page for all email payment functionality
-              builder: (context) => const MetaMaskEmailPaymentPage(),
+              builder: (context) => EmailPaymentPage(
+                userId: args?['userId'] ?? 0,
+                userName: args?['userName'] ?? '',
+                userEmail: args?['userEmail'] ?? '',
+              ),
             );
             
-          case '/deploy_contract':
-            return MaterialPageRoute(
-              builder: (context) => const ContractDeploymentPage(),
-            );
+          
             
-          case '/metamask_payment':
-            return MaterialPageRoute(
-              builder: (context) => const MetaMaskEmailPaymentPage(),
-            );
+          
         }
         
         // If route not found
