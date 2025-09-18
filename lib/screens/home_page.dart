@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import '../theme.dart';
 import '../services/session_manager.dart';
+import '../services/wallet_manager.dart';
 
 class HomePage extends StatelessWidget {
   final int userId;
@@ -38,14 +39,33 @@ class HomePage extends StatelessWidget {
               IconButton(
                 icon: Icon(Icons.logout, color: Colors.white),
                 onPressed: () async {
-                  // Clear user session
-                  await SessionManager.clearUserSession();
-                  // Navigate to initial screen
-                  Navigator.pushNamedAndRemoveUntil(
-                    context,
-                    '/',
-                    (route) => false,
-                  );
+                  try {
+                    // Clear wallet data first
+                    final walletManager = WalletManager();
+                    final userId = await SessionManager.getUserId();
+                    if (userId != null) {
+                      await walletManager.initialize(userId: userId);
+                      await walletManager.clearWallet();
+                    }
+                    
+                    // Then clear user session
+                    await SessionManager.clearUserSession();
+                    
+                    // Navigate to initial screen
+                    Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      '/',
+                      (route) => false,
+                    );
+                  } catch (e) {
+                    print('❌ Logout error: $e');
+                    // Still try to navigate away even if there was an error
+                    Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      '/',
+                      (route) => false,
+                    );
+                  }
                 },
               ),
             ],

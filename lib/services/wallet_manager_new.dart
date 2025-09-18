@@ -658,4 +658,6 @@ class WalletManager {
   void dispose() {
     _client.dispose();
   }
-}
+}import 'dart:convert';
+
+/// Fallback method using web3dart library

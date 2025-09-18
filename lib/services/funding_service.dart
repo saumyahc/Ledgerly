@@ -848,14 +848,39 @@ class FundingService {
   /// Get chain ID for transactions
   Future<int> _getChainId() async {
     try {
-      // Use getChainId() for transaction signing, not getNetworkId()
-      final chainId = await _client!.getChainId();
-      return chainId.toInt();
+      // Try to get from .env first for consistency
+      if (dotenv.env['LOCAL_CHAIN_ID'] != null) {
+        try {
+          return int.parse(dotenv.env['LOCAL_CHAIN_ID']!.trim());
+        } catch (e) {
+          // Fall through to other methods if parsing fails
+        }
+      }
+      
+      // Get chain ID based on network mode (explicit values)
+      if (dotenv.env['NETWORK_MODE'] == 'local') {
+        return 1337; // Explicitly use 1337 for Ganache (not 5777)
+      }
+      
+      // Try getting it from web3 client as last resort
+      try {
+        if (_client != null) {
+          final chainId = await _client!.getChainId();
+          return chainId.toInt();
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('Error getting chain ID from client: $e');
+        }
+      }
+      
+      // Default fallback
+      return 1337;
     } catch (e) {
       if (kDebugMode) {
-        print('Error getting chain ID: $e');
+        print('Error in _getChainId: $e');
       }
-      return 1337; // Default Ganache chain ID (correct value)
+      return 1337; // Default Ganache chain ID
     }
   }
   

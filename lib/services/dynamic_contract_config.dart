@@ -34,7 +34,18 @@ class DynamicContractConfig {
       print('🔄 Fetching contract config from backend...');
       
       // Get current chain ID from environment
-      final chainId = dotenv.env['NETWORK_MODE'] == 'local' ? 5777 : 11155111;
+      int chainId;
+      if (dotenv.env['LOCAL_CHAIN_ID'] != null) {
+        try {
+          chainId = int.parse(dotenv.env['LOCAL_CHAIN_ID']!.trim());
+        } catch (e) {
+          // Use default based on network mode
+          chainId = dotenv.env['NETWORK_MODE'] == 'local' ? 1337 : 11155111;
+        }
+      } else {
+        // Use default based on network mode
+        chainId = dotenv.env['NETWORK_MODE'] == 'local' ? 1337 : 11155111;
+      }
       
       final url = '${ApiConstants.saveContract}?contract_name=$contractName&chain_id=$chainId';
       final response = await http.get(Uri.parse(url));
