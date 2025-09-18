@@ -63,39 +63,83 @@ class ContractService {
     await initialize();
     
     try {
+      print('DEBUG: Starting sendPaymentToEmail with email=$email, amount=$amount');
+      print('DEBUG: Memo provided: ${memo != null ? 'YES (${memo.length} chars)' : 'NO'}');
+      
       // Convert email to bytes32 hash (simple approach)
       final emailBytes = email.toLowerCase().trim().codeUnits;
       final emailHash = emailBytes.take(32).toList();
       while (emailHash.length < 32) emailHash.add(0);
       
+      print('DEBUG: Created emailHash with ${emailHash.length} bytes');
+      print('DEBUG: First few bytes: ${emailHash.take(5).toList()}');
+      
       // Convert amount to wei
       final amountWei = EtherAmount.fromUnitAndValue(EtherUnit.ether, amount);
+      print('DEBUG: Amount in Wei: ${amountWei.getInWei}');
       
       // Get contract function
       final function = _contract.function('sendPaymentToEmail');
+      print('DEBUG: Contract function: ${function.name}');
+      
+      // Prepare parameters - if memo is provided, include it
+      List<dynamic> parameters;
+      
+      // If memo is provided, we need to encode it properly
+      if (memo != null && memo.isNotEmpty) {
+        // Create a bytes array for the memo (limited to 100 characters)
+        final memoBytes = memo.codeUnits.take(100).toList();
+        parameters = [emailHash, memoBytes];
+        print('DEBUG: Created parameters with memo. Total params: ${parameters.length}');
+        print('DEBUG: Memo bytes length: ${memoBytes.length}');
+      } else {
+        // No memo, just email hash
+        parameters = [emailHash];
+        print('DEBUG: Created parameters without memo. Total params: ${parameters.length}');
+      }
       
       // Create transaction
       final transaction = Transaction.callContract(
         contract: _contract,
         function: function,
-        parameters: [emailHash],
+        parameters: parameters,
         value: amountWei,
       );
       
+      print('DEBUG: Created transaction with value: ${amountWei.getInWei}');
+      print('DEBUG: Parameters count: ${parameters.length}');
+      print('DEBUG: Parameters types: ${parameters.map((p) => p.runtimeType.toString()).join(', ')}');
+      
       // Send transaction
       final chainId = await _contractConfig.chainId;
-      final txHash = await _client.sendTransaction(
-        credentials,
-        transaction,
-        chainId: chainId,
-      );
+      print('DEBUG: Using chainId: $chainId');
       
-      return {
-        'success': true,
-        'txHash': txHash,
-        'message': 'Payment sent via smart contract'
-      };
+      try {
+        final txHash = await _client.sendTransaction(
+          credentials,
+          transaction,
+          chainId: chainId,
+        );
+        
+        print('DEBUG: Transaction sent successfully with hash: $txHash');
+        
+        return {
+          'success': true,
+          'txHash': txHash,
+          'message': 'Payment sent via smart contract'
+        };
+      } catch (txError) {
+        print('DEBUG: Error sending transaction: $txError');
+        print('DEBUG: Error type: ${txError.runtimeType}');
+        throw txError; // Rethrow to be caught by outer try-catch
+      }
     } catch (e) {
+      print('DEBUG: Error in sendPaymentToEmail: $e');
+      print('DEBUG: Error type: ${e.runtimeType}');
+      if (e is FormatException) {
+        print('DEBUG: Format exception details: ${e.message}');
+        print('DEBUG: Format exception source: ${e.source}');
+      }
       return {
         'success': false,
         'error': e.toString()

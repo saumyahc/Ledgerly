@@ -56,7 +56,7 @@ class _WalletPageState extends State<WalletPage> {
 
   Future<void> _loadWalletData() async {
     try {
-      final address = await _walletManager.getAddress();
+      final address = await _walletManager.getWalletAddress();
       final balance = await _walletManager.getBalance();
       
       setState(() {
@@ -73,9 +73,9 @@ class _WalletPageState extends State<WalletPage> {
     setState(() => _isLoading = true);
     
     try {
-      final walletData = await _walletManager.createWallet();
-      final address = walletData['address']!;
-      final mnemonic = walletData['mnemonic']!;
+      final walletData = await _walletManager.createWalletWithMnemonic();
+      final address = walletData['address'];
+      final mnemonic = walletData['mnemonic'];
       
       // Link to backend
       await _linkWalletToBackend(address);
@@ -85,7 +85,9 @@ class _WalletPageState extends State<WalletPage> {
       // Show success with mnemonic backup
       _showWalletCreatedSuccess(address, mnemonic);
     } catch (e) {
+      print(e);
       _showError('Failed to create wallet: $e');
+      
     } finally {
       setState(() => _isLoading = false);
     }

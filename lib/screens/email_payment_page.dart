@@ -174,8 +174,15 @@ class _EmailPaymentPageState extends State<EmailPaymentPage> {
         _recipientWalletAddress = null;
       });
     } catch (e) {
+      print('DEBUG: _sendBlockchainPayment failed: $e');
+      print('DEBUG: Error type: ${e.runtimeType}');
+      if (e is FormatException) {
+        print('DEBUG: Format exception details: ${e.message}');
+        print('DEBUG: Format exception source: ${e.source}');
+      }
       setState(() {
         _errorMessage = 'Failed to send payment: $e';
+        print(e);
       });
     } finally {
       setState(() {
@@ -218,32 +225,67 @@ class _EmailPaymentPageState extends State<EmailPaymentPage> {
 
       // 6. Try contract payment first if email is verified
       if (_isRecipientVerified && _recipientEmailController.text.trim().isNotEmpty) {
+        print('DEBUG: Attempting contract payment to verified email: ${_recipientEmailController.text.trim()}');
+        
+        // Only pass memo if it's not empty
+        String? memoToSend = null;
+        if (_memoController.text.trim().isNotEmpty) {
+          memoToSend = _memoController.text.trim();
+          print('DEBUG: Including memo in contract payment: "$memoToSend" (${memoToSend.length} chars)');
+        } else {
+          print('DEBUG: No memo provided for contract payment');
+        }
+        
+        print('DEBUG: Calling contract service with amount: $amount ETH');
         final contractResult = await _contractService.sendPaymentToEmail(
           email: _recipientEmailController.text.trim(),
           amount: amount,
           credentials: credentials,
-          memo: _memoController.text.trim(),
+          memo: memoToSend,
         );
         
         if (contractResult['success'] == true) {
+          print('DEBUG: Contract payment successful: ${contractResult['txHash']}');
           return contractResult;
         } else {
-          print('Contract payment failed, falling back to direct transfer: ${contractResult['error']}');
+          print('DEBUG: Contract payment failed with error: ${contractResult['error']}');
+          print('DEBUG: Falling back to direct transfer...');
         }
       }
 
-      // 7. Fallback to direct wallet transfer
-      final txHash = await _walletManager.sendTransaction(
-        toAddress: recipientAddress,
-        amount: amount,
-        memo: _memoController.text.trim().isNotEmpty ? _memoController.text.trim() : null,
-      );
-
-      return {
-        'success': true,
-        'txHash': txHash,
-        'message': 'Direct transfer successful'
-      };
+      // 7. Fallback to direct wallet transfer using JSON-RPC
+      print('DEBUG: Performing direct wallet transfer to: $recipientAddress');
+      
+      // Be extra careful with memo handling - ensure it's properly formatted
+      String? memo = null;
+      if (_memoController.text.trim().isNotEmpty) {
+        memo = _memoController.text.trim();
+        print('DEBUG: Including memo in direct transfer: "$memo" (${memo.length} chars)');
+      } else {
+        print('DEBUG: No memo for direct transfer');
+      }
+      
+      try {
+        print('DEBUG: Calling wallet manager sendTransaction with amount: $amount ETH');
+        // Pass null explicitly if no memo to ensure clean parameters
+        final txHash = await _walletManager.sendTransaction(
+          toAddress: recipientAddress,
+          amount: amount,
+          memo: memo,
+        );
+        
+        print('DEBUG: Direct transfer successful with hash: $txHash');
+        
+        return {
+          'success': true,
+          'txHash': txHash,
+          'message': 'Direct transfer successful'
+        };
+      } catch (e) {
+        print('DEBUG: Direct transfer failed with error: $e');
+        print('DEBUG: Error type: ${e.runtimeType}');
+        throw e; // Rethrow to be caught by outer try-catch
+      }
     } catch (e) {
       return {'success': false, 'error': 'Transaction failed: $e'};
     }
