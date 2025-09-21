@@ -43,13 +43,16 @@ dependencies:
   
   # Blockchain Dependencies
   web3dart: ^2.7.3
-  web_socket_channel: ^3.0.3
+  web_socket_channel: ^3.0.3  # Restored to original version since we removed walletconnect_dart
   flutter_secure_storage: ^9.2.2
   bip39: ^1.0.6
   ed25519_hd_key: ^2.2.0
   hex: ^0.2.0
   crypto: ^3.0.5
-  flutter_dotenv: ^5.1.0 
+  flutter_dotenv: ^5.1.0
+  url_launcher: ^6.2.5
+  flutter_inappwebview: ^6.0.0
+  qr_flutter: ^4.1.0
 
 dev_dependencies:
   flutter_test:

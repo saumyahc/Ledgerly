@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 
 /// Service for communicating with the backend wallet API
 class WalletApiService {
-  static const String baseUrl = 'http://your-server.com/backend'; // Update with your actual server URL
+  static const String baseUrl = 'https://ledgerly.hivizstudios.com/backend_example'; // Using the same base URL as in ApiConstants
   
   /// Link wallet address to user account
   static Future<Map<String, dynamic>> linkWalletToUser({
