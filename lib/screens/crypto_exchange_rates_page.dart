@@ -1,7 +1,7 @@
 // crypto_exchange_rates_page.dart
 import 'package:flutter/material.dart';
 import '../theme.dart';
-import '../services/crypto_api_service.dart';
+import '/services/crypto_api_service.dart';
 
 class CryptoExchangeRatesPage extends StatefulWidget {
   const CryptoExchangeRatesPage({super.key});

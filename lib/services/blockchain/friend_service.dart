@@ -1,4 +1,4 @@
-import '../models/friend.dart';
+import '/models/friend.dart';
 
 class FriendService {
   Future<List<Friend>> fetchFriends() async {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme.dart';
 import '../services/session_manager.dart';
-import 'home_page.dart';
+import 'stock_info.dart';
 import 'wallet_page.dart';
 import 'history_page.dart';
 import 'profile_info_page.dart';
@@ -57,11 +57,7 @@ class _MainNavigationState extends State<MainNavigation> {
 
   List<Widget> _getPages() {
     return [
-      HomePage(
-        userId: widget.userId,
-        userName: widget.userName,
-        userEmail: widget.userEmail,
-      ),
+      StockInfoPage(),
       WalletPage(
         userId: widget.userId,
         userName: widget.userName,

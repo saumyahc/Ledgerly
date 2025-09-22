@@ -1,3 +1,4 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 /// Central place for API endpoints and base URLs.
 class ApiConstants {
   // Change this to your production base URL (no trailing slash)
@@ -33,4 +34,15 @@ class ApiConstants {
   // Contract details
   static const String emailPaymentRegistryAddress = '0x89580Ee54E4e618dbe9FC2FA7b48ADF51bd40400'; // Deployed on local development network
   static const int defaultChainId = 1337; // Local development network chain ID
+}
+
+
+
+class FinnhubConstants {
+  static const String apiKey = 'YOUR_API_KEY_HERE';
+  static String quoteUrl(String symbol) =>
+      'https://finnhub.io/api/v1/quote?symbol=$symbol&token=$apiKey';
+
+  static String symbolsUrl(String exchange) =>
+      'https://finnhub.io/api/v1/stock/symbol?exchange=$exchange&token=$apiKey';
 }
