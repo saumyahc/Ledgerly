@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../services/blockchain_service.dart';
 import '../models/bet.dart';
 import 'challenge_detail_screen.dart';
 import 'create_challenge_screen.dart';
@@ -11,13 +10,18 @@ class ChallengeListScreen extends StatefulWidget {
 }
 
 class _ChallengeListScreenState extends State<ChallengeListScreen> {
-  final BlockchainService _service = BlockchainService();
   late Future<List<BetChallenge>> _challenges;
 
   @override
   void initState() {
     super.initState();
-    _challenges = _service.fetchChallenges();
+    _challenges = _fetchChallenges();
+  }
+
+  // Temporary placeholder until we implement betting service
+  Future<List<BetChallenge>> _fetchChallenges() async {
+    // Return empty list for now - will be replaced with betting service
+    return [];
   }
 
   @override
@@ -126,7 +130,7 @@ class _ChallengeListScreenState extends State<ChallengeListScreen> {
           );
           if (created == true) {
             setState(() {
-              _challenges = _service.fetchChallenges(); // refresh list
+              _challenges = _fetchChallenges(); // refresh list
             });
           }
         },

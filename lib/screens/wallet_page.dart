@@ -3,7 +3,8 @@ import 'package:flutter/services.dart';
 import '../theme.dart';
 import '../services/wallet_manager.dart';
 import '../services/wallet_api_service.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../services/transaction_service.dart';
+import 'send_page.dart';
 
 class WalletPage extends StatefulWidget {
   final int userId;
@@ -28,6 +29,8 @@ class _WalletPageState extends State<WalletPage> {
   double _balance = 0.0;
   String? _walletAddress;
   bool _hasWallet = false;
+  List<Map<String, dynamic>> _transactions = [];
+  bool _isLoadingTransactions = false;
 
   @override
   void initState() {
@@ -64,8 +67,35 @@ class _WalletPageState extends State<WalletPage> {
         _balance = balance;
         _hasWallet = address != null;
       });
+      
+      // Load transactions
+      await _loadTransactions();
     } catch (e) {
       _showError('Failed to load wallet data: $e');
+    }
+  }
+
+  Future<void> _loadTransactions() async {
+    if (_walletAddress == null) return;
+    
+    setState(() => _isLoadingTransactions = true);
+    
+    try {
+      final response = await TransactionService.getTransactionHistory(
+        userId: widget.userId,
+        limit: 10, // Load latest 10 transactions
+      );
+      
+      final transactions = List<Map<String, dynamic>>.from(response['transactions'] ?? []);
+      
+      setState(() {
+        _transactions = transactions;
+      });
+    } catch (e) {
+      print('Failed to load transactions: $e');
+      // Don't show error for transactions as it's not critical
+    } finally {
+      setState(() => _isLoadingTransactions = false);
     }
   }
 
@@ -429,134 +459,476 @@ class _WalletPageState extends State<WalletPage> {
   }
 
   Widget _buildWalletContent() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Balance Card
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  const Text(
-                    'Balance',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+    return RefreshIndicator(
+      onRefresh: _refreshBalance,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            // Main Balance Card
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [AppColors.primary, Color(0xFF8B5FD9)],
+                ),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.3),
+                    blurRadius: 15,
+                    offset: const Offset(0, 8),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${_balance.toStringAsFixed(4)} ETH',
-                    style: const TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
+                ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  children: [
+                    const Text(
+                      'Total Balance',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                  ),
-                  // Add funding button for development
-                  if (_walletManager.isFundingAvailable) ...[
-                    const SizedBox(height: 12),
-                    ElevatedButton.icon(
-                      onPressed: _requestFunding,
-                      icon: const Icon(Icons.account_balance_wallet, size: 16),
-                      label: const Text('Get Test ETH'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${_balance.toStringAsFixed(6)} ETH',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 36,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '\$${(_balance * 2500).toStringAsFixed(2)} USD', // Mock ETH price
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Address Row
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '${_walletAddress?.substring(0, 6)}...${_walletAddress?.substring(_walletAddress!.length - 4)}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontFamily: 'monospace',
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: _copyAddress,
+                            child: const Icon(
+                              Icons.copy,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
-                ],
+                ),
               ),
             ),
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Address Card
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
+            
+            const SizedBox(height: 24),
+            
+            // Quick Actions
+            Row(
+              children: [
+                Expanded(
+                  child: _buildActionButton(
+                    icon: Icons.send_rounded,
+                    label: 'Send',
+                    onTap: _showSendDialog,
+                    color: const Color(0xFF4CAF50),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildActionButton(
+                    icon: Icons.qr_code_scanner_rounded,
+                    label: 'Receive',
+                    onTap: _showReceiveDialog,
+                    color: const Color(0xFF2196F3),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildActionButton(
+                    icon: Icons.swap_horiz_rounded,
+                    label: 'Swap',
+                    onTap: _showSwapDialog,
+                    color: const Color(0xFFFF9800),
+                  ),
+                ),
+                if (_walletManager.isFundingAvailable) ...[
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildActionButton(
+                      icon: Icons.account_balance_wallet_rounded,
+                      label: 'Faucet',
+                      onTap: _requestFunding,
+                      color: const Color(0xFF9C27B0),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            
+            const SizedBox(height: 24),
+            
+            // Recent Transactions
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Wallet Address',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          _walletAddress ?? '',
-                          style: const TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 12,
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Recent Activity',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
                           ),
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.copy),
-                        onPressed: _copyAddress,
-                      ),
-                    ],
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pushNamed(context, '/history');
+                          },
+                          child: const Text('View All'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  _buildTransactionsList(),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    required Color color,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: 24,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTransactionsList() {
+    if (_isLoadingTransactions) {
+      return const Padding(
+        padding: EdgeInsets.all(32.0),
+        child: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_transactions.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(32.0),
+        child: Center(
+          child: Column(
+            children: [
+              Icon(
+                Icons.receipt_long_outlined,
+                size: 48,
+                color: Colors.grey,
+              ),
+              SizedBox(height: 16),
+              Text(
+                'No transactions yet',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: _transactions.length,
+      separatorBuilder: (context, index) => const Divider(height: 1),
+      itemBuilder: (context, index) {
+        final tx = _transactions[index];
+        
+        // Determine transaction display properties
+        final isIncoming = tx['direction'] == 'incoming';
+        final type = tx['transaction_type'] ?? 'unknown';
+        final amount = double.tryParse(tx['amount'].toString()) ?? 0.0;
+        final amountStr = '${isIncoming ? '+' : '-'}${amount.toStringAsFixed(4)} ETH';
+        
+        IconData icon;
+        Color color;
+        String subtitle;
+        
+        switch (type) {
+          case 'faucet':
+            icon = Icons.water_drop;
+            color = Colors.blue;
+            subtitle = 'Faucet funding';
+            break;
+          case 'send':
+            icon = Icons.arrow_upward;
+            color = Colors.red;
+            subtitle = tx['to_address'] != null 
+                ? 'To ${tx['to_address'].toString().substring(0, 10)}...'
+                : 'Send transaction';
+            break;
+          case 'receive':
+            icon = Icons.arrow_downward;
+            color = Colors.green;
+            subtitle = tx['from_address'] != null 
+                ? 'From ${tx['from_address'].toString().substring(0, 10)}...'
+                : 'Receive transaction';
+            break;
+          case 'betting':
+            icon = Icons.casino;
+            color = Colors.purple;
+            subtitle = 'Betting - ${tx['bet_type'] ?? 'Unknown'}';
+            break;
+          default:
+            icon = Icons.swap_horiz;
+            color = Colors.grey;
+            subtitle = type;
+        }
+        
+        // Format timestamp
+        String timeStr = 'Unknown time';
+        if (tx['created_at'] != null) {
+          try {
+            final timestamp = DateTime.parse(tx['created_at']);
+            final now = DateTime.now();
+            final difference = now.difference(timestamp);
+            
+            if (difference.inMinutes < 60) {
+              timeStr = '${difference.inMinutes} min ago';
+            } else if (difference.inHours < 24) {
+              timeStr = '${difference.inHours} hour${difference.inHours > 1 ? 's' : ''} ago';
+            } else {
+              timeStr = '${difference.inDays} day${difference.inDays > 1 ? 's' : ''} ago';
+            }
+          } catch (e) {
+            timeStr = tx['created_at'].toString();
+          }
+        }
+        
+        return ListTile(
+          leading: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              color: color,
+              size: 20,
+            ),
+          ),
+          title: Text(
+            subtitle,
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+            ),
+          ),
+          subtitle: Text(
+            timeStr,
+            style: const TextStyle(
+              color: Colors.grey,
+              fontSize: 12,
+            ),
+          ),
+          trailing: Text(
+            amountStr,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: color,
+              fontSize: 14,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showSendDialog() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SendPage(
+          userId: widget.userId,
+          userEmail: widget.userEmail,
+          currentBalance: _balance,
+        ),
+      ),
+    );
+    
+    // If payment was successful, refresh wallet data
+    if (result == true) {
+      _loadWalletData();
+    }
+  }
+
+  void _showReceiveDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Receive ETH'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Share your wallet address to receive ETH:'),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                children: [
+                  // Placeholder for QR code
+                  Container(
+                    width: 200,
+                    height: 200,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Center(
+                      child: Text('QR Code\nComing Soon'),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    _walletAddress ?? '',
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               ),
             ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: _copyAddress,
+            child: const Text('Copy Address'),
           ),
-          
-          const SizedBox(height: 24),
-          
-          // Action Buttons
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pushNamed(
-                      context,
-                      '/send_payment',
-                      arguments: {
-                        'userId': widget.userId,
-                        'userName': widget.userName,
-                        'userEmail': widget.userEmail,
-                      },
-                    );
-                  },
-                  icon: const Icon(Icons.send),
-                  label: const Text('Send'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pushNamed(
-                      context,
-                      '/email_payment',
-                      arguments: {
-                        'userId': widget.userId,
-                        'userName': widget.userName,
-                        'userEmail': widget.userEmail,
-                      },
-                    );
-                  },
-                  icon: const Icon(Icons.email),
-                  label: const Text('Pay via Email'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.secondary,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ),
-            ],
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Done'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSwapDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Swap Tokens'),
+        content: const Text('Token swap feature coming soon!'),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
           ),
         ],
       ),

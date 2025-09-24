@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../constants.dart';
 
 /// Service for communicating with the backend wallet API
 class WalletApiService {
-  static const String baseUrl = 'https://ledgerly.hivizstudios.com/backend_example'; // Using the same base URL as in ApiConstants
   
   /// Link wallet address to user account
   static Future<Map<String, dynamic>> linkWalletToUser({
@@ -12,7 +12,7 @@ class WalletApiService {
   }) async {
     try {
       final response = await http.put(
-        Uri.parse('$baseUrl/wallet_api.php'),
+        Uri.parse(ApiConstants.walletApi),
         headers: {
           'Content-Type': 'application/json',
         },
@@ -47,7 +47,7 @@ class WalletApiService {
   static Future<Map<String, dynamic>> getUserWallet(int userId) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/wallet_api.php?user_id=$userId'),
+        Uri.parse('${ApiConstants.walletApi}?user_id=$userId'),
         headers: {
           'Content-Type': 'application/json',
         },

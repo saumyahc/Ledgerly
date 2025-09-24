@@ -22,7 +22,6 @@ class _HistoryPageState extends State<HistoryPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   bool _isLoading = false;
-  String _selectedFilter = 'All';
 
   final List<Map<String, dynamic>> _transactions = [
     {
@@ -133,20 +132,6 @@ class _HistoryPageState extends State<HistoryPage>
         elevation: 0,
         automaticallyImplyLeading: false,
         actions: [
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.filter_list, color: Colors.white),
-            onSelected: (value) {
-              setState(() {
-                _selectedFilter = value;
-              });
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(value: 'All', child: Text('All Transactions')),
-              const PopupMenuItem(value: 'Send', child: Text('Sent')),
-              const PopupMenuItem(value: 'Receive', child: Text('Received')),
-              const PopupMenuItem(value: 'Exchange', child: Text('Exchanges')),
-            ],
-          ),
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: _refreshTransactions,

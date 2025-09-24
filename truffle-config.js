@@ -70,8 +70,8 @@ module.exports = {
     development: {
       host: "127.0.0.1",     // Localhost
       port: 8545,            // Same port as Ganache (NOT 9545!)
-      network_id: "5777",    // Same network ID as Ganache
-      gas: 6721975,
+      network_id: 5777,     // Same network ID as Ganache (as number)
+      gas: 8000000,          // Increased gas limit for modular architecture
       gasPrice: 20000000000
     },
     
@@ -106,10 +106,10 @@ module.exports = {
   // Configure your compilers
   compilers: {
     solc: {
-      version: "0.8.21",
+      version: "0.8.19",
       settings: {
         optimizer: {
-          enabled: true,
+          enabled: false,
           runs: 200
         }
       }

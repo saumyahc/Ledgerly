@@ -118,7 +118,7 @@ class _CryptoExchangeRatesPageState extends State<CryptoExchangeRatesPage> {
                             ),
                             const SizedBox(height: 8),
                             DropdownButtonFormField<String>(
-                              initialValue: selectedBaseCurrency,
+                              value: selectedBaseCurrency,
                               decoration: InputDecoration(
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),

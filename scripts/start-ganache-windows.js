@@ -3,8 +3,8 @@ const fs = require('fs');
 
 console.log('🚀 Starting Ganache for Windows...');
 
-// Direct command execution
-const command = `npx ganache-cli --port 8545 --deterministic --accounts 10 --defaultBalanceEther 100 --gasLimit 8000000 --gasPrice 20000000000 --db ./ganache-db --networkId 5777 --host 0.0.0.0`;
+// Direct command execution using new Ganache v7 with correct arguments
+const command = `npx ganache --server.port 8545 --wallet.deterministic --wallet.totalAccounts 10 --wallet.defaultBalance 100 --miner.blockGasLimit 8000000 --miner.defaultGasPrice 20000000000 --database.dbPath ./ganache-db --chain.networkId 5777 --chain.chainId 5777 --server.host 0.0.0.0`;
 
 console.log('📋 Command:', command);
 

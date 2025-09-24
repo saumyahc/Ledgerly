@@ -9,7 +9,6 @@ import '../constants.dart';
 class FundingService {
   Web3Client? _client;
   DeployedContract? _contract;
-  ContractFunction? _requestFaucetFunds;
   ContractFunction? _requestFaucetAmount;
   ContractFunction? _getFaucetInfo;
   ContractFunction? _canRequestFaucet;
@@ -68,14 +67,6 @@ class FundingService {
       );
       
       // Get contract functions (check if they exist first)
-      try {
-        _requestFaucetFunds = _contract!.function('requestFaucetFunds');
-      } catch (e) {
-        if (kDebugMode) {
-          print('⚠️ requestFaucetFunds function not found in contract ABI');
-        }
-      }
-      
       try {
         _requestFaucetAmount = _contract!.function('requestFaucetAmount');
       } catch (e) {

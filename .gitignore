@@ -91,3 +91,4 @@ web/flutter_service_worker.js
 
 # Package lock file (auto-generated)
 pubspec.lock
+.ganache-pid

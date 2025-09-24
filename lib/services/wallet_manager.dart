@@ -8,6 +8,8 @@ import 'package:hex/hex.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:math';
+import 'dart:io' show Platform;
+import 'transaction_service.dart';
 
 // Enum for transaction types
 enum TransactionType { sent, received, contract }
@@ -69,7 +71,7 @@ class WalletManager {
    
     'FUNDING_ACCOUNT': '0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1',
     'FUNDING_ACCOUNT_KEY': '0x4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d',
-    'LOCAL_CHAIN_ID': '1337',
+    'LOCAL_CHAIN_ID': '5777',
     'GAS_PRICE': '20000000000', // 20 Gwei
     'PREFUND_AMOUNT': '100000000000000000', // 0.1 ETH
     'DEFAULT_HD_PATH': "m/44'/60'/0'/0/0",
@@ -81,6 +83,18 @@ class WalletManager {
   late Web3Client _client;
   Credentials? _credentials;
   bool _isInitialized = false;
+  
+  /// Get platform-appropriate RPC URL for local development
+  String _getPlatformRpcUrl() {
+    final baseUrl = getConfig('LOCAL_RPC_URL') ?? _defaultConfig['LOCAL_RPC_URL']!;
+    
+    // For Android emulator, map localhost to 10.0.2.2
+    if (!kIsWeb && Platform.isAndroid) {
+      return baseUrl.replaceAll('127.0.0.1', '10.0.2.2').replaceAll('localhost', '10.0.2.2');
+    }
+    
+    return baseUrl;
+  }
   int? _userId;
   String _networkMode = 'local';
   
@@ -99,7 +113,8 @@ class WalletManager {
     
     // Initialize web3 client with appropriate RPC URL based on network mode
     String rpcUrlKey = '${networkMode.toUpperCase()}_RPC_URL';
-    final rpcUrl = getConfig(rpcUrlKey) ?? _defaultConfig['LOCAL_RPC_URL']!;
+    final rpcUrl = networkMode == 'local' ? _getPlatformRpcUrl() : 
+                   (getConfig(rpcUrlKey) ?? _defaultConfig['LOCAL_RPC_URL']!);
     _client = Web3Client(rpcUrl, http.Client());
     
     // Try to load credentials from storage
@@ -215,6 +230,11 @@ class WalletManager {
   /// Get credentials for transaction signing (only for internal use by services)
   Credentials? get credentials => _credentials;
   
+  /// Get credentials for transaction signing (async method)
+  Future<Credentials?> getCredentials() async {
+    return _credentials;
+  }
+  
   /// Check if wallet exists
   Future<bool> hasWallet() async {
     if (_userId == null) return false;
@@ -251,7 +271,7 @@ class WalletManager {
       
       // Use a raw HTTP request to the Ethereum node
       final http.Client httpClient = http.Client();
-      final rpcUrl = getConfig('LOCAL_RPC_URL') ?? 'http://127.0.0.1:8545';
+      final rpcUrl = _getPlatformRpcUrl();
       
       // Get funding account from config with fallbacks
       final fundingAccount = getConfig('FUNDING_ACCOUNT') ?? '0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1';
@@ -446,7 +466,7 @@ class WalletManager {
       
       // Use a raw HTTP request to the Ethereum node
       final http.Client httpClient = http.Client();
-      final rpcUrl = getConfig('LOCAL_RPC_URL') ?? 'http://127.0.0.1:8545';
+      final rpcUrl = _getPlatformRpcUrl();
       
       // Get funding account from config with fallbacks
       final fundingAccount = getConfig('FUNDING_ACCOUNT') ?? '0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1';
@@ -549,70 +569,84 @@ class WalletManager {
   Future<void> _tryWeb3DartPrefunding(String walletAddress) async {
     try {
       if (kDebugMode) {
-        print('FALLBACK: Using web3dart library for pre-funding');
+        print('🔄 FALLBACK: Using web3dart library for pre-funding');
       }
       
-      // Get funding account private key from config with fallbacks
-      final gasPvtKey = getConfig('FUNDING_ACCOUNT_KEY') ?? 
-                        '0x4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d';
+      // Use a funded Ganache account to send gas money
+      // This corresponds to Ganache's default first account
+      const gasPrivateKey = '0xc87509a1c067bbde78beb793e6fa76530b6382a4c0241e5e4a9ec0a0f44dc0d3'; // Ganache account 0
+      final gasAccount = EthPrivateKey.fromHex(gasPrivateKey);
+      final gasAccountAddress = await gasAccount.extractAddress();
       
-      // Get prefund amount from config with fallbacks
-      final prefundAmountStr = getConfig('PREFUND_AMOUNT') ?? '100000000000000000'; // 0.1 ETH
-      final prefundAmount = BigInt.parse(prefundAmountStr);
-      
-      // Calculate ETH amount (converting from wei)
-      final ethAmount = prefundAmount.toDouble() / 1e18;
-      
-      // Get gas price from config with fallbacks
-      final gasPriceStr = getConfig('GAS_PRICE') ?? '20000000000'; // 20 Gwei
-      final gasPrice = BigInt.parse(gasPriceStr);
-      
-      // Get chain ID from config with fallbacks
-      final chainIdStr = getConfig('LOCAL_CHAIN_ID') ?? '1337';
-      final chainId = int.parse(chainIdStr);
-      
+      // Check the gas account balance first
+      final gasBalance = await _client.getBalance(gasAccountAddress);
       if (kDebugMode) {
-        print('   Using funding account from private key');
-        print('   Prefund amount: $ethAmount ETH');
-        print('   Gas price: ${gasPrice.toDouble() / 1e9} Gwei');
-        print('   Chain ID: $chainId');
+        print('   Gas account balance: ${gasBalance.getValueInUnit(EtherUnit.ether)} ETH');
       }
       
-      final gasAccount = EthPrivateKey.fromHex(gasPvtKey);
-      final gasAmount = EtherAmount.fromUnitAndValue(
-          EtherUnit.wei, 
-          prefundAmount
-      );
+      // Make sure we have enough for gas + transfer
+      final gasAmount = EtherAmount.fromBigInt(EtherUnit.ether, BigInt.from(1)); // 1 ETH as BigInt
+      final gasPrice = EtherAmount.inWei(BigInt.from(20000000000)); // 20 gwei
+      final gasLimit = 21000;
+      final totalGasCost = EtherAmount.inWei(gasPrice.getInWei * BigInt.from(gasLimit));
+      final totalNeeded = EtherAmount.inWei(gasAmount.getInWei + totalGasCost.getInWei);
+      
+      if (gasBalance.getInWei < totalNeeded.getInWei) {
+        throw Exception('Gas account has insufficient funds. Has: ${gasBalance.getValueInUnit(EtherUnit.ether)} ETH, needs: ${totalNeeded.getValueInUnit(EtherUnit.ether)} ETH');
+      }
       
       if (kDebugMode) {
-        final fromAddress = await gasAccount.extractAddress();
         print('   Transaction details:');
-        print('   - From: ${fromAddress.hex}');
+        print('   - From: ${gasAccountAddress.hex}');
         print('   - To: $walletAddress');
-        print('   - Amount: $ethAmount ETH');
+        print('   - Amount: 1 ETH');
+        print('   - Gas cost: ${totalGasCost.getValueInUnit(EtherUnit.ether)} ETH');
       }
       
       final transaction = Transaction(
         to: EthereumAddress.fromHex(walletAddress),
         value: gasAmount,
-        gasPrice: EtherAmount.inWei(gasPrice),
-        maxGas: 21000,
+        gasPrice: gasPrice,
+        maxGas: gasLimit,
       );
       
-      // Always use explicit chainId to avoid type conversion issues
+      // Always use explicit int 1337 for chainId to avoid type conversion issues
       final txHash = await _client.sendTransaction(
         gasAccount,
         transaction,
-        chainId: chainId,
+        chainId: 1337,
       );
       
       if (kDebugMode) {
         print('   Transaction completed');
         print('   Transaction hash: $txHash');
       }
+      
+      // Record the faucet transaction in the database
+      try {
+        if (_userId != null) {
+          await TransactionService.recordFaucetTransaction(
+            userId: _userId!,
+            walletAddress: walletAddress,
+            transactionHash: txHash,
+            amount: 1.0, // 1 ETH
+            memo: 'Test ETH from development faucet',
+          );
+          
+          if (kDebugMode) {
+            print('✅ Faucet transaction recorded in database');
+          }
+        }
+      } catch (dbError) {
+        if (kDebugMode) {
+          print('⚠️  Failed to record transaction in database: $dbError');
+        }
+        // Don't fail the funding operation if database recording fails
+      }
+      
     } catch (e) {
       if (kDebugMode) {
-        print('FALLBACK: Web3dart pre-funding failed: $e');
+        print('❌ FALLBACK: Web3dart pre-funding failed: $e');
       }
       throw Exception('Web3dart pre-funding failed: $e');
     }
@@ -891,7 +925,7 @@ class WalletManager {
       print('DEBUG: [WalletManager] Creating and signing raw transaction for Ganache');
       
       // Get RPC URL
-      final rpcUrl = getConfig('LOCAL_RPC_URL') ?? 'http://127.0.0.1:8545';
+      final rpcUrl = _getPlatformRpcUrl();
       print('DEBUG: [WalletManager] Using RPC URL: $rpcUrl');
       
       // Get our address
@@ -1010,6 +1044,29 @@ class WalletManager {
         
         // Save the transaction to history
         _saveTransactionToHistory(txHash, toAddress, amount, TransactionType.sent);
+        
+        // Record the transaction in the database
+        try {
+          if (_userId != null) {
+            await TransactionService.recordSendTransaction(
+              userId: _userId!,
+              walletAddress: fromAddress.hex,
+              transactionHash: txHash,
+              toAddress: toAddress,
+              amount: amount,
+              memo: memo,
+            );
+            
+            if (kDebugMode) {
+              print('✅ Send transaction recorded in database');
+            }
+          }
+        } catch (dbError) {
+          if (kDebugMode) {
+            print('⚠️  Failed to record transaction in database: $dbError');
+          }
+          // Don't fail the transaction if database recording fails
+        }
         
         return txHash;
       } catch (parseError) {

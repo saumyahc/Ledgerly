@@ -4,6 +4,8 @@ CREATE TABLE IF NOT EXISTS transactions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     sender_id INT NOT NULL,
     receiver_id INT NOT NULL,
+    sender_email VARCHAR(255) NOT NULL,
+    receiver_email VARCHAR(255) NOT NULL,
     amount DECIMAL(20, 8) NOT NULL,
     memo TEXT NULL,
     transaction_hash VARCHAR(66) NULL,

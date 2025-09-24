@@ -1,0 +1,422 @@
+{
+  "info": {
+    "name": "Ledgerly Backend API Tests",
+    "description": "Complete Postman collection for testing Ledgerly wallet and transaction APIs",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Wallet API",
+      "item": [
+        {
+          "name": "Get Wallet Info",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/wallet_api.php?user_id={{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["wallet_api.php"],
+              "query": [
+                {
+                  "key": "user_id",
+                  "value": "{{user_id}}",
+                  "description": "User ID to get wallet info for"
+                }
+              ]
+            },
+            "description": "Get wallet information for a specific user"
+          },
+          "response": [
+            {
+              "name": "Success - User with wallet",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{base_url}}/wallet_api.php?user_id=1",
+                  "host": ["{{base_url}}"],
+                  "path": ["wallet_api.php"],
+                  "query": [{"key": "user_id", "value": "1"}]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"wallet\": {\n    \"address\": \"0x1234567890123456789012345678901234567890\",\n    \"created_at\": \"2023-01-15 10:30:00\",\n    \"has_wallet\": true\n  }\n}"
+            },
+            {
+              "name": "Success - User without wallet",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{base_url}}/wallet_api.php?user_id=2",
+                  "host": ["{{base_url}}"],
+                  "path": ["wallet_api.php"],
+                  "query": [{"key": "user_id", "value": "2"}]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"wallet\": {\n    \"address\": null,\n    \"created_at\": null,\n    \"has_wallet\": false\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Link/Update Wallet Address",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": {{user_id}},\n  \"wallet_address\": \"{{wallet_address}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/wallet_api.php",
+              "host": ["{{base_url}}"],
+              "path": ["wallet_api.php"]
+            },
+            "description": "Link or update wallet address for a user"
+          },
+          "response": [
+            {
+              "name": "Success - Wallet linked",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"user_id\": 1,\n  \"wallet_address\": \"0x1234567890123456789012345678901234567890\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/wallet_api.php",
+                  "host": ["{{base_url}}"],
+                  "path": ["wallet_api.php"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Wallet address linked successfully\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Transaction API",
+      "item": [
+        {
+          "name": "Record Transaction",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": {{user_id}},\n  \"wallet_address\": \"{{wallet_address}}\",\n  \"transaction_hash\": \"0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890\",\n  \"transaction_type\": \"transfer\",\n  \"direction\": \"out\",\n  \"from_address\": \"{{wallet_address}}\",\n  \"to_address\": \"0x9876543210987654321098765432109876543210\",\n  \"amount\": \"1.5\",\n  \"currency_symbol\": \"ETH\",\n  \"gas_used\": \"21000\",\n  \"gas_price\": \"20000000000\",\n  \"gas_cost\": \"0.00042\",\n  \"status\": \"confirmed\",\n  \"confirmations\": 12,\n  \"block_number\": \"18500000\",\n  \"memo\": \"Test payment\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/transaction_api.php?action=record",
+              "host": ["{{base_url}}"],
+              "path": ["transaction_api.php"],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "record",
+                  "description": "Action to perform"
+                }
+              ]
+            },
+            "description": "Record a new blockchain transaction"
+          },
+          "response": [
+            {
+              "name": "Success - Transaction recorded",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"user_id\": 1,\n  \"wallet_address\": \"0x1234567890123456789012345678901234567890\",\n  \"transaction_hash\": \"0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890\",\n  \"transaction_type\": \"transfer\",\n  \"direction\": \"out\",\n  \"from_address\": \"0x1234567890123456789012345678901234567890\",\n  \"to_address\": \"0x9876543210987654321098765432109876543210\",\n  \"amount\": \"1.5\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/transaction_api.php?action=record",
+                  "host": ["{{base_url}}"],
+                  "path": ["transaction_api.php"],
+                  "query": [{"key": "action", "value": "record"}]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Transaction recorded successfully\",\n  \"transaction_id\": 123\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Transaction History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/transaction_api.php?action=history&user_id={{user_id}}&limit=10&offset=0",
+              "host": ["{{base_url}}"],
+              "path": ["transaction_api.php"],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "history",
+                  "description": "Action to perform"
+                },
+                {
+                  "key": "user_id",
+                  "value": "{{user_id}}",
+                  "description": "User ID to get history for"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Number of transactions to return"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Offset for pagination"
+                }
+              ]
+            },
+            "description": "Get transaction history for a user"
+          },
+          "response": [
+            {
+              "name": "Success - Transaction history",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{base_url}}/transaction_api.php?action=history&user_id=1&limit=10&offset=0",
+                  "host": ["{{base_url}}"],
+                  "path": ["transaction_api.php"],
+                  "query": [
+                    {"key": "action", "value": "history"},
+                    {"key": "user_id", "value": "1"},
+                    {"key": "limit", "value": "10"},
+                    {"key": "offset", "value": "0"}
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"transactions\": [\n    {\n      \"id\": 123,\n      \"transaction_hash\": \"0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890\",\n      \"transaction_type\": \"transfer\",\n      \"direction\": \"out\",\n      \"from_address\": \"0x1234567890123456789012345678901234567890\",\n      \"to_address\": \"0x9876543210987654321098765432109876543210\",\n      \"amount\": \"1.5\",\n      \"currency_symbol\": \"ETH\",\n      \"status\": \"confirmed\",\n      \"created_at\": \"2023-01-15 10:30:00\"\n    }\n  ],\n  \"pagination\": {\n    \"total\": 1,\n    \"limit\": 10,\n    \"offset\": 0\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Pending Transactions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/transaction_api.php?action=pending&user_id={{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["transaction_api.php"],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "pending",
+                  "description": "Action to perform"
+                },
+                {
+                  "key": "user_id",
+                  "value": "{{user_id}}",
+                  "description": "User ID to get pending transactions for"
+                }
+              ]
+            },
+            "description": "Get pending transactions for a user"
+          },
+          "response": [
+            {
+              "name": "Success - Pending transactions",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{base_url}}/transaction_api.php?action=pending&user_id=1",
+                  "host": ["{{base_url}}"],
+                  "path": ["transaction_api.php"],
+                  "query": [
+                    {"key": "action", "value": "pending"},
+                    {"key": "user_id", "value": "1"}
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"pending_transactions\": [\n    {\n      \"id\": 124,\n      \"transaction_hash\": \"0xdef456789abcdef456789abcdef456789abcdef456789abcdef456789abcdef\",\n      \"transaction_type\": \"transfer\",\n      \"direction\": \"out\",\n      \"amount\": \"0.5\",\n      \"status\": \"pending\",\n      \"created_at\": \"2023-01-15 11:00:00\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Transaction Status",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transaction_hash\": \"0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890\",\n  \"status\": \"confirmed\",\n  \"confirmations\": 12,\n  \"block_number\": \"18500000\",\n  \"block_hash\": \"0x123456789abcdef123456789abcdef123456789abcdef123456789abcdef1234\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/transaction_api.php?action=update_status",
+              "host": ["{{base_url}}"],
+              "path": ["transaction_api.php"],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "update_status",
+                  "description": "Action to perform"
+                }
+              ]
+            },
+            "description": "Update the status of an existing transaction"
+          },
+          "response": [
+            {
+              "name": "Success - Status updated",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"transaction_hash\": \"0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890\",\n  \"status\": \"confirmed\",\n  \"confirmations\": 12\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/transaction_api.php?action=update_status",
+                  "host": ["{{base_url}}"],
+                  "path": ["transaction_api.php"],
+                  "query": [{"key": "action", "value": "update_status"}]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Transaction status updated successfully\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Transaction Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/transaction_api.php?action=summary&user_id={{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["transaction_api.php"],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "summary",
+                  "description": "Action to perform"
+                },
+                {
+                  "key": "user_id",
+                  "value": "{{user_id}}",
+                  "description": "User ID to get summary for"
+                }
+              ]
+            },
+            "description": "Get transaction summary statistics for a user"
+          },
+          "response": [
+            {
+              "name": "Success - Transaction summary",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{base_url}}/transaction_api.php?action=summary&user_id=1",
+                  "host": ["{{base_url}}"],
+                  "path": ["transaction_api.php"],
+                  "query": [
+                    {"key": "action", "value": "summary"},
+                    {"key": "user_id", "value": "1"}
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"summary\": {\n    \"total_transactions\": 25,\n    \"total_sent\": \"15.75\",\n    \"total_received\": \"20.50\",\n    \"pending_count\": 2,\n    \"confirmed_count\": 23,\n    \"failed_count\": 0\n  }\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Set default values if variables are not set",
+          "if (!pm.environment.get('base_url')) {",
+          "    pm.environment.set('base_url', 'https://ledgerly.hivizstudios.com/backend_example');",
+          "}",
+          "",
+          "if (!pm.environment.get('user_id')) {",
+          "    pm.environment.set('user_id', '1');",
+          "}",
+          "",
+          "if (!pm.environment.get('wallet_address')) {",
+          "    pm.environment.set('wallet_address', '0x1234567890123456789012345678901234567890');",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://ledgerly.hivizstudios.com/backend_example",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "wallet_address",
+      "value": "0x1234567890123456789012345678901234567890",
+      "type": "string"
+    }
+  ]
+}

@@ -1,4 +1,3 @@
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 /// Central place for API endpoints and base URLs.
 class ApiConstants {
   // Change this to your production base URL (no trailing slash)
@@ -39,10 +38,20 @@ class ApiConstants {
 
 
 class FinnhubConstants {
-  static const String apiKey = 'YOUR_API_KEY_HERE';
+  // API key should be loaded from environment variable FINNHUB_API_KEY
+  // For development, you can set a fallback key here temporarily
+  static const String apiKey = const String.fromEnvironment('FINNHUB_API_KEY', 
+      defaultValue: 'FINNHUB_API_KEY=d383nk1r01qlbdj3p8vgd383nk1r01qlbdj3p900');
+  
   static String quoteUrl(String symbol) =>
       'https://finnhub.io/api/v1/quote?symbol=$symbol&token=$apiKey';
 
   static String symbolsUrl(String exchange) =>
       'https://finnhub.io/api/v1/stock/symbol?exchange=$exchange&token=$apiKey';
+      
+  static String searchUrl(String query) =>
+      'https://finnhub.io/api/v1/search?q=$query&token=$apiKey';
+      
+  static String companyProfileUrl(String symbol) =>
+      'https://finnhub.io/api/v1/stock/profile2?symbol=$symbol&token=$apiKey';
 }

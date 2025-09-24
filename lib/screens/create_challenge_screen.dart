@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../services/friend_service.dart';
 import '../models/friend.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -18,9 +17,13 @@ class _CreateChallengeScreenState extends State<CreateChallengeScreen> {
   @override
   void initState() {
     super.initState();
-    FriendService().fetchFriends().then((list) {
-      setState(() => _friends = list);
-    });
+    // Placeholder - will be replaced with betting service
+    _loadFriends();
+  }
+
+  // Temporary placeholder until we implement friend service
+  void _loadFriends() {
+    setState(() => _friends = []);
   }
 
   void _pickDate() async {

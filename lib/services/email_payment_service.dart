@@ -8,7 +8,7 @@ class EmailPaymentService {
   static Future<Map<String, dynamic>> resolveEmailToWallet(String email) async {
     try {
       final response = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}/email_payment.php?email=$email'),
+        Uri.parse('${ApiConstants.emailPayment}?email=$email'),
         headers: {
           'Content-Type': 'application/json',
         },
@@ -44,7 +44,7 @@ class EmailPaymentService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('${ApiConstants.baseUrl}/email_payment.php'),
+        Uri.parse(ApiConstants.emailPayment),
         headers: {
           'Content-Type': 'application/json',
         },
