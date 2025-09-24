@@ -17,6 +17,10 @@ class TransactionService {
     required String fromAddress,
     required String toAddress,
     required double amount,
+    required int senderId,
+    required int receiverId,
+    required String senderEmail,
+    required String receiverEmail,
     String currencySymbol = 'ETH',
     int? blockNumber,
     String? blockHash,
@@ -50,6 +54,10 @@ class TransactionService {
         'currency_symbol': currencySymbol,
         'status': status,
         'confirmations': confirmations,
+        'sender_id': senderId,
+        'receiver_id': receiverId,
+        'sender_email': senderEmail,
+        'receiver_email': receiverEmail,
       };
 
       // Add optional fields
@@ -76,6 +84,7 @@ class TransactionService {
         print('📝 Recording transaction: $transactionHash');
         print('   Type: $transactionType, Direction: $direction');
         print('   Amount: $amount $currencySymbol');
+        print('   Full request body: ' + jsonEncode(requestBody));
       }
 
       final response = await http.post(
@@ -83,6 +92,11 @@ class TransactionService {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(requestBody),
       );
+
+      if (kDebugMode) {
+        print('   Backend response status: ${response.statusCode}');
+        print('   Backend response body: ${response.body}');
+      }
 
       final responseData = jsonDecode(response.body);
 
@@ -313,6 +327,10 @@ class TransactionService {
       fromAddress: '0x0000000000000000000000000000000000000000', // Faucet address
       toAddress: walletAddress,
       amount: amount,
+      senderId: userId,
+      receiverId: userId,
+      senderEmail: '',
+      receiverEmail: '',
       memo: memo ?? 'Test ETH from faucet',
       internalNotes: 'Development faucet funding',
     );
@@ -325,6 +343,10 @@ class TransactionService {
     required String transactionHash,
     required String toAddress,
     required double amount,
+    required int senderId,
+    required int receiverId,
+    required String senderEmail,
+    required String receiverEmail,
     double? gasCost,
     String? memo,
   }) async {
@@ -337,6 +359,10 @@ class TransactionService {
       fromAddress: walletAddress,
       toAddress: toAddress,
       amount: amount,
+      senderId: senderId,
+      receiverId: receiverId,
+      senderEmail: senderEmail,
+      receiverEmail: receiverEmail,
       gasCost: gasCost,
       memo: memo,
     );
@@ -349,6 +375,10 @@ class TransactionService {
     required String transactionHash,
     required String fromAddress,
     required double amount,
+    required int senderId,
+    required int receiverId,
+    required String senderEmail,
+    required String receiverEmail,
     String? memo,
   }) async {
     return await recordTransaction(
@@ -360,6 +390,10 @@ class TransactionService {
       fromAddress: fromAddress,
       toAddress: walletAddress,
       amount: amount,
+      senderId: senderId,
+      receiverId: receiverId,
+      senderEmail: senderEmail,
+      receiverEmail: receiverEmail,
       memo: memo,
     );
   }
@@ -375,6 +409,10 @@ class TransactionService {
     required String toAddress,
     required double amount,
     required String betId,
+    required int senderId,
+    required int receiverId,
+    required String senderEmail,
+    required String receiverEmail,
     String? contractAddress,
     String? contractMethod,
     String? memo,
@@ -390,6 +428,10 @@ class TransactionService {
       amount: amount,
       betId: betId,
       betType: betType,
+      senderId: senderId,
+      receiverId: receiverId,
+      senderEmail: senderEmail,
+      receiverEmail: receiverEmail,
       contractAddress: contractAddress,
       contractMethod: contractMethod,
       memo: memo,

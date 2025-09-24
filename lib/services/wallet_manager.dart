@@ -68,7 +68,6 @@ class WalletManager {
   static const Map<String, String> _defaultConfig = {
     'NETWORK_MODE': 'local',
     'LOCAL_RPC_URL': 'http://127.0.0.1:8545',
-   
     'FUNDING_ACCOUNT': '0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1',
     'FUNDING_ACCOUNT_KEY': '0x4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d',
     'LOCAL_CHAIN_ID': '5777',
@@ -83,7 +82,14 @@ class WalletManager {
   late Web3Client _client;
   Credentials? _credentials;
   bool _isInitialized = false;
+  int? _userId;
+  String _networkMode = 'local';
   
+  // Make the key storage user-specific
+  String get _privateKeyKey => 'wallet_private_key_user_$_userId';
+  String get _mnemonicKey => 'wallet_mnemonic_user_$_userId';
+  String get _txHistoryKey => 'wallet_tx_history_user_$_userId';
+
   /// Get platform-appropriate RPC URL for local development
   String _getPlatformRpcUrl() {
     final baseUrl = getConfig('LOCAL_RPC_URL') ?? _defaultConfig['LOCAL_RPC_URL']!;
@@ -95,13 +101,6 @@ class WalletManager {
     
     return baseUrl;
   }
-  int? _userId;
-  String _networkMode = 'local';
-  
-  // Make the key storage user-specific
-  String get _privateKeyKey => 'wallet_private_key_user_$_userId';
-  String get _mnemonicKey => 'wallet_mnemonic_user_$_userId';
-  String get _txHistoryKey => 'wallet_tx_history_user_$_userId';
   
   /// Initialize wallet manager for a specific user
   Future<void> initialize({int? userId, String networkMode = 'local'}) async {
@@ -247,6 +246,70 @@ class WalletManager {
   bool get isFundingAvailable {
     return _networkMode == 'local';
   }
+
+  /// Lookup receiver user ID by wallet address using backend API
+  Future<int> _getReceiverId(String walletAddress) async {
+    try {
+      // Replace with your actual backend API endpoint
+      final url = 'https://ledgerly.hivizstudios.com/backend_example/get_profile.php?wallet_address=$walletAddress';
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['user'] != null && data['user']['id'] != null) {
+          return int.parse(data['user']['id'].toString());
+        }
+      }
+      throw Exception('Receiver ID not found for wallet: $walletAddress');
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error getting receiver ID: $e');
+      }
+      // Return a default value or rethrow based on your needs
+      throw Exception('Failed to get receiver ID: $e');
+    }
+  }
+
+  /// Lookup sender email by user ID using backend API
+  Future<String> _getSenderEmail(int userId) async {
+    try {
+      // Replace with your actual backend API endpoint
+      final url = 'https://ledgerly.hivizstudios.com/backend_example/get_profile.php?user_id=$userId';
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['user'] != null && data['user']['email'] != null) {
+          return data['user']['email'];
+        }
+      }
+      throw Exception('Sender email not found for user: $userId');
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error getting sender email: $e');
+      }
+      throw Exception('Failed to get sender email: $e');
+    }
+  }
+
+  /// Lookup receiver email by user ID using backend API
+  Future<String> _getReceiverEmail(int userId) async {
+    try {
+      // Replace with your actual backend API endpoint
+      final url = 'https://ledgerly.hivizstudios.com/backend_example/get_profile.php?user_id=$userId';
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['user'] != null && data['user']['email'] != null) {
+          return data['user']['email'];
+        }
+      }
+      throw Exception('Receiver email not found for user: $userId');
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error getting receiver email: $e');
+      }
+      throw Exception('Failed to get receiver email: $e');
+    }
+  }
   
   /// Request funding from the development faucet
   /// This is only available in local development mode
@@ -348,6 +411,7 @@ class WalletManager {
       };
     }
   }
+
   /// Generate a new random mnemonic phrase
   String generateMnemonic() {
     return bip39.generateMnemonic();
@@ -445,11 +509,13 @@ class WalletManager {
   /// - FUNDING_ACCOUNT: Address of the account to use for funding (default: Ganache account 0)
   /// - FUNDING_ACCOUNT_KEY: Private key of the funding account (for fallback method)
   Future<void> _preFundWithGas(String walletAddress) async {
-      if (kDebugMode) {
-        print('STEP 1: Starting gas pre-funding process');
-        final networkMode = getConfig('NETWORK_MODE') ?? 'local';
-        print('Network mode: $networkMode');
-      }    final networkMode = getConfig('NETWORK_MODE') ?? 'local';
+    if (kDebugMode) {
+      print('STEP 1: Starting gas pre-funding process');
+      final networkMode = getConfig('NETWORK_MODE') ?? 'local';
+      print('Network mode: $networkMode');
+    }
+    
+    final networkMode = getConfig('NETWORK_MODE') ?? 'local';
     if (networkMode != 'local') {
       if (kDebugMode) {
         print('Gas pre-funding aborted: Not in local mode');
@@ -1048,15 +1114,24 @@ class WalletManager {
         // Record the transaction in the database
         try {
           if (_userId != null) {
+            // You must fetch actual receiverId, senderEmail, receiverEmail from your app logic
+            // For demo, using placeholder values. Replace with real values in production.
+            final senderId = _userId!;
+            final receiverId = await _getReceiverId(toAddress); // Implement this lookup
+            final senderEmail = await _getSenderEmail(senderId); // Implement this lookup
+            final receiverEmail = await _getReceiverEmail(receiverId); // Implement this lookup
             await TransactionService.recordSendTransaction(
-              userId: _userId!,
+              userId: senderId,
               walletAddress: fromAddress.hex,
               transactionHash: txHash,
               toAddress: toAddress,
               amount: amount,
               memo: memo,
+              senderId: senderId,
+              receiverId: receiverId,
+              senderEmail: senderEmail,
+              receiverEmail: receiverEmail,
             );
-            
             if (kDebugMode) {
               print('✅ Send transaction recorded in database');
             }

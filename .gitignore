@@ -57,6 +57,9 @@ windows/flutter
 # Ganache blockchain data
 ganache-db/
 
+# Ignore deployments folder
+deployments/
+
 # iOS build artifacts
 ios/
 android/local.properties

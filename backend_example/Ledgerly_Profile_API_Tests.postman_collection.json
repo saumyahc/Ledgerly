@@ -1,0 +1,106 @@
+{
+  "info": {
+    "name": "Ledgerly Profile API Tests",
+    "description": "Test cases for get_profile.php endpoint.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Get Profile by User ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://ledgerly.hivizstudios.com/backend_example/get_profile.php?user_id=1",
+          "protocol": "https",
+          "host": ["ledgerly", "hivizstudios", "com"],
+          "path": ["backend_example", "get_profile.php"],
+          "query": [{"key": "user_id", "value": "1"}]
+        }
+      }
+    },
+    {
+      "name": "Get Profile by Email",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://ledgerly.hivizstudios.com/backend_example/get_profile.php?email=vanshmalani01@gmail.com",
+          "protocol": "https",
+          "host": ["ledgerly", "hivizstudios", "com"],
+          "path": ["backend_example", "get_profile.php"],
+          "query": [{"key": "email", "value": "vanshmalani01@gmail.com"}]
+        }
+      }
+    },
+    {
+      "name": "Get Profile by Wallet Address",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://ledgerly.hivizstudios.com/backend_example/get_profile.php?wallet_address=0x1234567890123456789012345678901234567890",
+          "protocol": "https",
+          "host": ["ledgerly", "hivizstudios", "com"],
+          "path": ["backend_example", "get_profile.php"],
+          "query": [{"key": "wallet_address", "value": "0x1234567890123456789012345678901234567890"}]
+        }
+      }
+    },
+    {
+      "name": "Get Profile with Invalid User ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://ledgerly.hivizstudios.com/backend_example/get_profile.php?user_id=999999",
+          "protocol": "https",
+          "host": ["ledgerly", "hivizstudios", "com"],
+          "path": ["backend_example", "get_profile.php"],
+          "query": [{"key": "user_id", "value": "999999"}]
+        }
+      }
+    },
+    {
+      "name": "Get Profile with Invalid Email",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://ledgerly.hivizstudios.com/backend_example/get_profile.php?email=notfound@example.com",
+          "protocol": "https",
+          "host": ["ledgerly", "hivizstudios", "com"],
+          "path": ["backend_example", "get_profile.php"],
+          "query": [{"key": "email", "value": "notfound@example.com"}]
+        }
+      }
+    },
+    {
+      "name": "Get Profile with Invalid Wallet Address",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://ledgerly.hivizstudios.com/backend_example/get_profile.php?wallet_address=0x0000000000000000000000000000000000000000",
+          "protocol": "https",
+          "host": ["ledgerly", "hivizstudios", "com"],
+          "path": ["backend_example", "get_profile.php"],
+          "query": [{"key": "wallet_address", "value": "0x0000000000000000000000000000000000000000"}]
+        }
+      }
+    },
+    {
+      "name": "Get Profile with No Parameters",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://ledgerly.hivizstudios.com/backend_example/get_profile.php",
+          "protocol": "https",
+          "host": ["ledgerly", "hivizstudios", "com"],
+          "path": ["backend_example", "get_profile.php"]
+        }
+      }
+    }
+  ]
+}

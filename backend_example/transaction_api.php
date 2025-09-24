@@ -70,6 +70,7 @@ switch($method) {
  */
 function recordTransaction($pdo) {
     $input = json_decode(file_get_contents('php://input'), true);
+    error_log('Transaction API: Received input: ' . json_encode($input));
     
     // Validate required fields
     $required = ['user_id', 'wallet_address', 'transaction_hash', 'transaction_type', 
@@ -77,6 +78,7 @@ function recordTransaction($pdo) {
     
     foreach ($required as $field) {
         if (!isset($input[$field]) || empty($input[$field])) {
+            error_log('Transaction API: Missing required field: ' . $field);
             http_response_code(400);
             echo json_encode(['error' => "Missing required field: $field"]);
             return;
@@ -84,13 +86,15 @@ function recordTransaction($pdo) {
     }
     
     try {
+        error_log('Transaction API: All required fields present. Attempting to insert transaction.');
         $sql = "INSERT INTO transactions (
             sender_id, receiver_id, sender_email, receiver_email, amount, memo, transaction_hash, status, created_at, updated_at
         ) VALUES (
             :sender_id, :receiver_id, :sender_email, :receiver_email, :amount, :memo, :transaction_hash, :status, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
         )";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([
+    $stmt = $pdo->prepare($sql);
+    error_log('Transaction API: Executing SQL insert.');
+    $stmt->execute([
             ':sender_id' => $input['sender_id'],
             ':receiver_id' => $input['receiver_id'],
             ':sender_email' => $input['sender_email'],
@@ -102,7 +106,7 @@ function recordTransaction($pdo) {
         ]);
         
         $transaction_id = $pdo->lastInsertId();
-        
+        error_log('Transaction API: Inserted transaction with ID: ' . $transaction_id);
         echo json_encode([
             'success' => true,
             'transaction_id' => $transaction_id,
@@ -110,6 +114,7 @@ function recordTransaction($pdo) {
         ]);
         
     } catch(PDOException $e) {
+        error_log('Transaction API: SQL error: ' . $e->getMessage());
         http_response_code(500);
         echo json_encode(['error' => 'Failed to record transaction: ' . $e->getMessage()]);
     }
