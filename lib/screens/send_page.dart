@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:web3dart/crypto.dart';
 import 'dart:io' show Platform;
 import 'dart:convert';
 import '../theme.dart';
@@ -50,7 +51,7 @@ class _SendPageState extends State<SendPage> {
 
   void _initializeWeb3() {
     // Use platform-appropriate localhost URL
-    String rpcUrl = 'http://127.0.0.1:8545';
+    String rpcUrl = ApiConstants.ganacheRpcUrl;
     if (!const bool.fromEnvironment('dart.library.js_util') && Platform.isAndroid) {
       rpcUrl = 'http://10.0.2.2:8545';
     }
@@ -216,7 +217,7 @@ class _SendPageState extends State<SendPage> {
       final txHash = await _web3Client.sendTransaction(
         credentials,
         transaction,
-        chainId: 5777, // Explicit Ganache chain ID
+        chainId: 1377, // Explicit Ganache chain ID
       );
       
       print('🎉 SUCCESS: ETH transfer sent successfully!');
@@ -306,7 +307,7 @@ class _SendPageState extends State<SendPage> {
       final txHash = await _web3Client.sendTransaction(
         credentials,
         transaction,
-        chainId: 5777, // Explicit Ganache chain ID
+        chainId: 1377, // Explicit Ganache chain ID
       );
       
       print('🎉 SUCCESS: ETH transfer sent successfully!');

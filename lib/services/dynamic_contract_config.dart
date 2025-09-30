@@ -16,49 +16,48 @@ class DynamicContractConfig {
     return _instance!;
   }
 
-  /// Fetch active contract configuration from backend
+  /// Fetch active contract configuration from backend (default: EmailPaymentRegistry)
   Future<Map<String, dynamic>> getContractConfig({
     String contractName = 'EmailPaymentRegistry',
     bool forceRefresh = false,
+    int? chainId,
   }) async {
-    // Return cached config if valid and not forcing refresh
+    // Use chainId from argument, env, or fallback
+    int resolvedChainId = chainId ?? (() {
+      if (dotenv.env['LOCAL_CHAIN_ID'] != null) {
+        try {
+          return int.parse(dotenv.env['LOCAL_CHAIN_ID']!.trim());
+        } catch (e) {
+          return dotenv.env['NETWORK_MODE'] == 'local' ? 1337 : 11155111;
+        }
+      } else {
+        return dotenv.env['NETWORK_MODE'] == 'local' ? 1337 : 11155111;
+      }
+    })();
+
+    // Use cache only if not forcing refresh, contractName matches, and chainId matches
     if (!forceRefresh && _cachedConfig != null && _lastFetch != null) {
       final timeSinceLastFetch = DateTime.now().difference(_lastFetch!);
-      if (timeSinceLastFetch < _cacheTimeout) {
-        print('📱 Using cached contract config');
+      if (timeSinceLastFetch < _cacheTimeout &&
+          _cachedConfig!['contractName'] == contractName &&
+          _cachedConfig!['chainId'].toString() == resolvedChainId.toString()) {
+        print('Using cached contract config for $contractName');
         return _cachedConfig!;
       }
     }
 
     try {
-      print('🔄 Fetching contract config from backend...');
-      
-      // Get current chain ID from environment
-      int chainId;
-      if (dotenv.env['LOCAL_CHAIN_ID'] != null) {
-        try {
-          chainId = int.parse(dotenv.env['LOCAL_CHAIN_ID']!.trim());
-        } catch (e) {
-          // Use default based on network mode
-          chainId = dotenv.env['NETWORK_MODE'] == 'local' ? 1337 : 11155111;
-        }
-      } else {
-        // Use default based on network mode
-        chainId = dotenv.env['NETWORK_MODE'] == 'local' ? 1337 : 11155111;
-      }
-      
-      final url = '${ApiConstants.saveContract}?contract_name=$contractName&chain_id=$chainId';
+      print('Fetching contract config for $contractName from backend...');
+      final url = '${ApiConstants.phpBaseUrl}/get_contract.php?contract_name=$contractName&chain_id=$resolvedChainId';
       final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        
-        if (data['success'] == true && data['contracts'] != null && data['contracts'].isNotEmpty) {
-          final contract = data['contracts'][0]; // Get most recent active contract
-          
+        if (data['success'] == true && data['contract'] != null) {
+          final contract = data['contract'];
           _cachedConfig = {
-            'contractName': contract['contract_name'],
-            'contractAddress': contract['contract_address'],
+            'contractName': contract['name'],
+            'contractAddress': contract['address'],
             'chainId': contract['chain_id'],
             'abi': contract['abi'],
             'deploymentTx': contract['deployment_tx'],
@@ -69,31 +68,28 @@ class DynamicContractConfig {
             'isTestnet': contract['network_mode'] == 'testnet',
             'isLocal': contract['network_mode'] == 'local',
           };
-          
           _lastFetch = DateTime.now();
-          
-          print('✅ Contract config fetched successfully');
-          print('   Contract: ${_cachedConfig!['contractName']}');
-          print('   Address: ${_cachedConfig!['contractAddress']}');
-          print('   Network: ${_cachedConfig!['networkMode']}');
-          
+          print('Contract config fetched: $contractName @ ${_cachedConfig!['contractAddress']}');
           return _cachedConfig!;
         } else {
-          throw Exception('No active contracts found');
+          throw Exception('No active contract found');
         }
       } else {
         throw Exception('HTTP ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
-      print('❌ Failed to fetch contract config: $e');
-      
-      // Fall back to static config if backend fails
-      print('🔄 Falling back to static configuration...');
+  print('Failed to fetch contract config: $e');
+  print('Falling back to static configuration...');
       return _getStaticFallback();
     }
   }
 
-  /// Get specific contract properties
+  /// Fetch any contract by name and chainId (for multi-contract support)
+  Future<Map<String, dynamic>> fetchContractByName(String contractName, int chainId, {bool forceRefresh = false}) async {
+    return getContractConfig(contractName: contractName, chainId: chainId, forceRefresh: forceRefresh);
+  }
+
+  /// Get specific contract properties (default: EmailPaymentRegistry)
   Future<String> get contractName async {
     final config = await getContractConfig();
     return config['contractName'] as String;
@@ -106,7 +102,7 @@ class DynamicContractConfig {
 
   Future<int> get chainId async {
     final config = await getContractConfig();
-    return config['chainId'] as int;
+    return int.parse(config['chainId'].toString());
   }
 
   Future<String> get abi async {
@@ -148,12 +144,12 @@ class DynamicContractConfig {
   void clearCache() {
     _cachedConfig = null;
     _lastFetch = null;
-    print('🗑️ Contract config cache cleared');
+  print('Contract config cache cleared');
   }
 
   /// Get static fallback configuration
   Map<String, dynamic> _getStaticFallback() {
-    print('⚠️ Using static fallback configuration');
+  print('Using static fallback configuration');
     
     // Import the static config as fallback
     return {
@@ -197,7 +193,7 @@ class DynamicContractConfig {
       'backendAvailable': isBackendUp,
       'hasCachedConfig': hasCache,
       'cacheAgeMinutes': cacheAge,
-      'baseUrl': ApiConstants.baseUrl,
+      'baseUrl': ApiConstants.phpBaseUrl,
       'lastFetch': _lastFetch?.toIso8601String(),
     };
   }

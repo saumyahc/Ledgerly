@@ -5,7 +5,7 @@ import '../constants.dart';
 
 /// Service for managing transaction recording and retrieval
 class TransactionService {
-  static const String _baseUrl = '${ApiConstants.baseUrl}/transaction_api.php';
+  static final String _baseUrl = '${ApiConstants.phpBaseUrl}/transaction_api.php';
 
   /// Record a new transaction
   static Future<Map<String, dynamic>> recordTransaction({

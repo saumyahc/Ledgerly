@@ -10,6 +10,7 @@ import 'dart:typed_data';
 import 'dart:math';
 import 'dart:io' show Platform;
 import 'transaction_service.dart';
+import '../constants.dart';
 
 // Enum for transaction types
 enum TransactionType { sent, received, contract }
@@ -161,19 +162,25 @@ class WalletManager {
     if (_runtimeConfig.containsKey(key)) {
       return _runtimeConfig[key];
     }
-    
+
     // Check environment variables
     final envValue = dotenv.env[key];
     if (envValue != null && envValue.isNotEmpty) {
       return envValue;
     }
-    
+
     // Fall back to default config
     if (_defaultConfig.containsKey(key)) {
+      if (kDebugMode) {
+        print('[WalletManager] Using _defaultConfig for "$key": ${_defaultConfig[key]}');
+      }
       return _defaultConfig[key];
     }
-    
+
     // Not found anywhere
+    if (kDebugMode) {
+      print('[WalletManager] Config key "$key" not found in runtime, env, or _defaultConfig');
+    }
     return null;
   }
   
@@ -250,8 +257,7 @@ class WalletManager {
   /// Lookup receiver user ID by wallet address using backend API
   Future<int> _getReceiverId(String walletAddress) async {
     try {
-      // Replace with your actual backend API endpoint
-      final url = 'https://ledgerly.hivizstudios.com/backend_example/get_profile.php?wallet_address=$walletAddress';
+      final url = '${ApiConstants.getProfile}?wallet_address=$walletAddress';
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -264,7 +270,6 @@ class WalletManager {
       if (kDebugMode) {
         print('Error getting receiver ID: $e');
       }
-      // Return a default value or rethrow based on your needs
       throw Exception('Failed to get receiver ID: $e');
     }
   }
@@ -272,8 +277,7 @@ class WalletManager {
   /// Lookup sender email by user ID using backend API
   Future<String> _getSenderEmail(int userId) async {
     try {
-      // Replace with your actual backend API endpoint
-      final url = 'https://ledgerly.hivizstudios.com/backend_example/get_profile.php?user_id=$userId';
+      final url = '${ApiConstants.getProfile}?user_id=$userId';
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -293,8 +297,7 @@ class WalletManager {
   /// Lookup receiver email by user ID using backend API
   Future<String> _getReceiverEmail(int userId) async {
     try {
-      // Replace with your actual backend API endpoint
-      final url = 'https://ledgerly.hivizstudios.com/backend_example/get_profile.php?user_id=$userId';
+      final url = '${ApiConstants.getProfile}?user_id=$userId';
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);

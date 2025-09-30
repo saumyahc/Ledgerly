@@ -329,6 +329,8 @@ class _StockInfoPageState extends State<StockInfoPage> {
 
   @override
   Widget build(BuildContext context) {
+    final uri = FinnhubConstants.symbolsUrl(_exchange);
+    print('Finnhub symbols URI: $uri');
     return Scaffold(
       appBar: AppBar(
         title: const Text('Stocks'),
@@ -356,6 +358,8 @@ class _StockInfoPageState extends State<StockInfoPage> {
               _buildSearchBar(),
               const SizedBox(height: 12),
               _buildTopMovers(),
+              const SizedBox(height: 12),
+              Text('Finnhub symbols URI: $uri', style: TextStyle(fontSize: 12, color: Colors.grey)),
               const SizedBox(height: 12),
               if (_error != null)
                 Container(
