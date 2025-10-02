@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../theme.dart';
 import '../services/email_payment_service.dart';
-import '../services/contract_service.dart';
 import '../services/wallet_manager.dart';
 
 class EmailPaymentPage extends StatefulWidget {
@@ -25,60 +26,29 @@ class _EmailPaymentPageState extends State<EmailPaymentPage> {
   final TextEditingController _recipientEmailController = TextEditingController();
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _memoController = TextEditingController();
-  final ContractService _contractService = ContractService();
-  final WalletManager _walletManager = WalletManager();
-  
+
   bool _isLoading = false;
   bool _isRecipientVerified = false;
   String? _recipientName;
   String? _recipientWalletAddress;
   String? _errorMessage;
-  
-  @override
-  void initState() {
-    super.initState();
-    _initializeBlockchain();
-  }
-  
-  Future<void> _initializeBlockchain() async {
-    setState(() {
-      _isLoading = true;
-    });
 
-    try {
-      // Initialize wallet and contract services
-      await _walletManager.initialize(userId: widget.userId);
-      await _contractService.initialize();
-      print('Wallet and contract services initialized successfully');
-    } catch (e) {
-      print('Error initializing services: $e');
-      setState(() {
-        _errorMessage = 'Failed to initialize services: $e';
-      });
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-  
+  // Replace with your actual backend URLs
+  final String phpBackendBaseUrl = 'https://ledgerly.hivizstudios.com/backend_example';
+  final String nodeMiddlewareBaseUrl = 'http://localhost:3001';
+
   Future<void> _verifyRecipient() async {
     final email = _recipientEmailController.text.trim();
-    
+
     if (email.isEmpty) {
-      setState(() {
-        _errorMessage = 'Please enter a recipient email';
-      });
+      setState(() => _errorMessage = 'Please enter a recipient email');
       return;
     }
-    
     if (email == widget.userEmail) {
-      setState(() {
-        _errorMessage = 'You cannot send payment to yourself';
-      });
+      setState(() => _errorMessage = 'You cannot send payment to yourself');
       return;
     }
-    
+
     setState(() {
       _isLoading = true;
       _isRecipientVerified = false;
@@ -86,29 +56,18 @@ class _EmailPaymentPageState extends State<EmailPaymentPage> {
       _recipientWalletAddress = null;
       _errorMessage = null;
     });
-    
+
     try {
-      // TODO: Smart contract lookup functionality not implemented yet
-      // First try to lookup via contract
-      final contractLookup = await _contractService.lookupEmailWallet(email);
-      if (contractLookup['success'] == true) {
+      // Lookup recipient via PHP backend
+      final uri = Uri.parse('$phpBackendBaseUrl/email_payment.php?email=${Uri.encodeComponent(email)}');
+      final response = await http.get(uri);
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true && data['user'] != null) {
         setState(() {
           _isRecipientVerified = true;
-          _recipientName = email;
-          _recipientWalletAddress = contractLookup['wallet'];
-        });
-        return;
-      }
-      
-      // Fallback to API lookup
-      final result = await EmailPaymentService.resolveEmailToWallet(email);
-      
-      if (result['success'] == true) {
-        final userData = result['userData'];
-        setState(() {
-          _isRecipientVerified = true;
-          _recipientName = userData['name'];
-          _recipientWalletAddress = userData['wallet_address'];
+          _recipientName = data['user']['name'] ?? email;
+          _recipientWalletAddress = data['user']['wallet_address'];
         });
       } else {
         setState(() {
@@ -120,177 +79,72 @@ class _EmailPaymentPageState extends State<EmailPaymentPage> {
         _errorMessage = 'Failed to verify recipient: $e';
       });
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
-  
+
   Future<void> _sendPayment() async {
     if (!_isRecipientVerified) {
-      setState(() {
-        _errorMessage = 'Please verify recipient first';
-      });
+      setState(() => _errorMessage = 'Please verify recipient first');
       return;
     }
-    
+
     final amount = double.tryParse(_amountController.text.trim());
     if (amount == null || amount <= 0) {
-      setState(() {
-        _errorMessage = 'Please enter a valid amount';
-      });
+      setState(() => _errorMessage = 'Please enter a valid amount');
       return;
     }
-    
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
-    
+
     try {
-      // Use BlockchainManager's sendTransaction method
-      final result = await _sendBlockchainPayment(amount);
-      if (!result['success']) {
-        throw Exception(result['error']);
-      }
-      
-      // Show success message and clear form
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Payment sent! Transaction: ${result['txHash'].toString().substring(0, 10)}...'),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 5),
-        ),
+      // Send payment via Node.js middleware
+      final uri = Uri.parse('$nodeMiddlewareBaseUrl/payment/email-to-email');
+      final response = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'fromEmail': widget.userEmail,
+          'toEmail': _recipientEmailController.text.trim(),
+          'amountEth': amount,
+          'memo': _memoController.text.trim(),
+        }),
       );
-      
-      // Clear form
-      _recipientEmailController.clear();
-      _amountController.clear();
-      _memoController.clear();
-      
-      setState(() {
-        _isRecipientVerified = false;
-        _recipientName = null;
-        _recipientWalletAddress = null;
-      });
-    } catch (e) {
-      print('DEBUG: _sendBlockchainPayment failed: $e');
-      print('DEBUG: Error type: ${e.runtimeType}');
-      if (e is FormatException) {
-        print('DEBUG: Format exception details: ${e.message}');
-        print('DEBUG: Format exception source: ${e.source}');
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Payment sent! Transaction: ${data['txHash'].toString().substring(0, 10)}...'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+        _recipientEmailController.clear();
+        _amountController.clear();
+        _memoController.clear();
+        setState(() {
+          _isRecipientVerified = false;
+          _recipientName = null;
+          _recipientWalletAddress = null;
+        });
+      } else {
+        setState(() {
+          _errorMessage = data['error'] ?? 'Failed to send payment';
+        });
       }
+    } catch (e) {
       setState(() {
         _errorMessage = 'Failed to send payment: $e';
-        print(e);
       });
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
-  
-  // Send payment using WalletManager and ContractService
-  Future<Map<String, dynamic>> _sendBlockchainPayment(double amount) async {
-    try {
-      // 1. Check if we have a wallet
-      final hasWallet = await _walletManager.hasWallet();
-      if (!hasWallet) {
-        return {'success': false, 'error': 'No wallet found. Please create a wallet first.'};
-      }
 
-      // 2. Get the recipient's wallet address
-      final recipientAddress = _recipientWalletAddress;
-      if (recipientAddress == null) {
-        return {'success': false, 'error': 'Recipient wallet address is missing'};
-      }
-
-      // 3. Validate the recipient address
-      if (!_walletManager.isValidAddress(recipientAddress)) {
-        return {'success': false, 'error': 'Invalid recipient wallet address'};
-      }
-
-      // 4. Check if we have sufficient balance
-      final balance = await _walletManager.getBalance();
-      if (balance < amount) {
-        return {'success': false, 'error': 'Insufficient balance. You have $balance ETH but need $amount ETH'};
-      }
-
-      // 5. Get credentials for transaction
-      final credentials = _walletManager.credentials;
-      if (credentials == null) {
-        return {'success': false, 'error': 'Could not get wallet credentials'};
-      }
-
-      // 6. Try contract payment first if email is verified
-      if (_isRecipientVerified && _recipientEmailController.text.trim().isNotEmpty) {
-        print('DEBUG: Attempting contract payment to verified email: ${_recipientEmailController.text.trim()}');
-        
-        // Only pass memo if it's not empty
-        String? memoToSend = null;
-        if (_memoController.text.trim().isNotEmpty) {
-          memoToSend = _memoController.text.trim();
-          print('DEBUG: Including memo in contract payment: "$memoToSend" (${memoToSend.length} chars)');
-        } else {
-          print('DEBUG: No memo provided for contract payment');
-        }
-        
-        print('DEBUG: Calling contract service with amount: $amount ETH');
-        final contractResult = await _contractService.sendPaymentToEmail(
-          email: _recipientEmailController.text.trim(),
-          amount: amount,
-          credentials: credentials,
-          memo: memoToSend,
-        );
-        
-        if (contractResult['success'] == true) {
-          print('DEBUG: Contract payment successful: ${contractResult['txHash']}');
-          return contractResult;
-        } else {
-          print('DEBUG: Contract payment failed with error: ${contractResult['error']}');
-          print('DEBUG: Falling back to direct transfer...');
-        }
-      }
-
-      // 7. Fallback to direct wallet transfer using JSON-RPC
-      print('DEBUG: Performing direct wallet transfer to: $recipientAddress');
-      
-      // Be extra careful with memo handling - ensure it's properly formatted
-      String? memo = null;
-      if (_memoController.text.trim().isNotEmpty) {
-        memo = _memoController.text.trim();
-        print('DEBUG: Including memo in direct transfer: "$memo" (${memo.length} chars)');
-      } else {
-        print('DEBUG: No memo for direct transfer');
-      }
-      
-      try {
-        print('DEBUG: Calling wallet manager sendTransaction with amount: $amount ETH');
-        // Pass null explicitly if no memo to ensure clean parameters
-        final txHash = await _walletManager.sendTransaction(
-          toAddress: recipientAddress,
-          amount: amount,
-          memo: memo,
-        );
-        
-        print('DEBUG: Direct transfer successful with hash: $txHash');
-        
-        return {
-          'success': true,
-          'txHash': txHash,
-          'message': 'Direct transfer successful'
-        };
-      } catch (e) {
-        print('DEBUG: Direct transfer failed with error: $e');
-        print('DEBUG: Error type: ${e.runtimeType}');
-        throw e; // Rethrow to be caught by outer try-catch
-      }
-    } catch (e) {
-      return {'success': false, 'error': 'Transaction failed: $e'};
-    }
-  }
-  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -314,30 +168,6 @@ class _EmailPaymentPageState extends State<EmailPaymentPage> {
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 24),
-              
-              // Under Development Notice for Smart Contract Features
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.green.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.check_circle, color: Colors.green.shade700),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Smart Contract Integration: Ready! Contract connected successfully.',
-                        style: TextStyle(color: Colors.green.shade800, fontWeight: FontWeight.w500),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              
               // Recipient email input with verify button
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -378,7 +208,6 @@ class _EmailPaymentPageState extends State<EmailPaymentPage> {
                 ],
               ),
               const SizedBox(height: 8),
-              
               // Recipient info (when verified)
               if (_isRecipientVerified && _recipientName != null) ...[
                 Container(
@@ -405,7 +234,6 @@ class _EmailPaymentPageState extends State<EmailPaymentPage> {
                 ),
                 const SizedBox(height: 16),
               ],
-              
               // Amount input
               TextFormField(
                 controller: _amountController,
@@ -421,7 +249,6 @@ class _EmailPaymentPageState extends State<EmailPaymentPage> {
                 enabled: !_isLoading,
               ),
               const SizedBox(height: 16),
-              
               // Memo input
               TextFormField(
                 controller: _memoController,
@@ -434,7 +261,6 @@ class _EmailPaymentPageState extends State<EmailPaymentPage> {
                 enabled: !_isLoading,
               ),
               const SizedBox(height: 8),
-              
               // Error message
               if (_errorMessage != null) ...[
                 Container(
@@ -451,7 +277,6 @@ class _EmailPaymentPageState extends State<EmailPaymentPage> {
                 ),
                 const SizedBox(height: 16),
               ],
-              
               // Send button
               SizedBox(
                 height: 50,
@@ -474,7 +299,6 @@ class _EmailPaymentPageState extends State<EmailPaymentPage> {
                 ),
               ),
               const SizedBox(height: 24),
-              
               // Information card
               Container(
                 padding: const EdgeInsets.all(16),
@@ -491,24 +315,7 @@ class _EmailPaymentPageState extends State<EmailPaymentPage> {
                     ),
                     SizedBox(height: 8),
                     Text(
-                      'Smart contract integration active! Payments can be sent via EmailPaymentRegistry contract or direct wallet transfers.',
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      'When you make a payment:',
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      '1. We lookup the recipient via smart contract first',
-                      style: TextStyle(fontSize: 14),
-                    ),
-                    Text(
-                      '2. If found, payment goes through the smart contract',
-                      style: TextStyle(fontSize: 14),
-                    ),
-                    Text(
-                      '3. Otherwise, direct wallet-to-wallet transfer',
-                      style: TextStyle(fontSize: 14),
+                      'Payments are sent via backend services. Recipient lookup and payment processing are handled securely by the server.',
                     ),
                     SizedBox(height: 8),
                     Text(
@@ -523,7 +330,7 @@ class _EmailPaymentPageState extends State<EmailPaymentPage> {
       ),
     );
   }
-  
+
   @override
   void dispose() {
     _recipientEmailController.dispose();

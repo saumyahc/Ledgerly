@@ -101,118 +101,24 @@ class _WalletPageState extends State<WalletPage> {
 
   Future<void> _createWallet() async {
     setState(() => _isLoading = true);
-    
+
     try {
-      final walletData = await _walletManager.createWalletWithMnemonic();
+      final walletData = await _walletManager.createWallet();
       final address = walletData['address'];
-      final mnemonic = walletData['mnemonic'];
-      
-      // Link to backend
+      final privateKey = walletData['privateKey'];
       await _linkWalletToBackend(address);
-      
       await _loadWalletData();
-      
-      // Show success with mnemonic backup
-      _showWalletCreatedSuccess(address, mnemonic);
+      _showWalletCreatedSuccess(address, privateKey ?? '');
     } catch (e) {
-      print(e);
+      await _walletManager.clearWallet();
       _showError('Failed to create wallet: $e');
-      
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
   Future<void> _importWallet() async {
-    // Show import method selection
-    final importMethod = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Import Wallet'),
-        content: const Text('How would you like to import your wallet?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, 'mnemonic'),
-            child: const Text('Seed Phrase'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, 'private_key'),
-            child: const Text('Private Key'),
-          ),
-        ],
-      ),
-    );
-
-    if (importMethod == null) return;
-
-    if (importMethod == 'mnemonic') {
-      await _importFromMnemonic();
-    } else {
-      await _importFromPrivateKey();
-    }
-  }
-
-  Future<void> _importFromMnemonic() async {
     final controller = TextEditingController();
-    
-    final mnemonic = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Import from Seed Phrase'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Enter your 12-word seed phrase:'),
-            const SizedBox(height: 8),
-            TextField(
-              controller: controller,
-              decoration: const InputDecoration(
-                labelText: 'Seed Phrase',
-                hintText: 'word1 word2 word3 ...',
-              ),
-              maxLines: 3,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: const Text('Import'),
-          ),
-        ],
-      ),
-    );
-
-    if (mnemonic == null || mnemonic.isEmpty) return;
-
-    setState(() => _isLoading = true);
-
-    try {
-      final address = await _walletManager.importWalletFromMnemonic(mnemonic);
-      
-      // Link to backend
-      await _linkWalletToBackend(address);
-      
-      await _loadWalletData();
-      _showSuccess('Wallet imported from seed phrase successfully!');
-    } catch (e) {
-      _showError('Failed to import wallet: $e');
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _importFromPrivateKey() async {
-    final controller = TextEditingController();
-    
     final privateKey = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
@@ -237,20 +143,16 @@ class _WalletPageState extends State<WalletPage> {
         ],
       ),
     );
-
     if (privateKey == null || privateKey.isEmpty) return;
-
     setState(() => _isLoading = true);
-
     try {
-      final address = await _walletManager.importWallet(privateKey);
-      
-      // Link to backend
+      final walletData = await _walletManager.importWallet(privateKey);
+      final address = walletData['address'];
       await _linkWalletToBackend(address);
-      
       await _loadWalletData();
       _showSuccess('Wallet imported successfully!');
     } catch (e) {
+      await _walletManager.clearWallet();
       _showError('Failed to import wallet: $e');
     } finally {
       setState(() => _isLoading = false);
@@ -294,7 +196,7 @@ class _WalletPageState extends State<WalletPage> {
 
     try {
       print('🔥 Requesting funding for amount: $amount ETH');
-      final result = await _walletManager.requestFunding(amount: amount);
+      final result = await _walletManager.requestFunding(amount);
       print('🔥 Funding result: $result');
       
       if (result['success'] == true) {
@@ -582,17 +484,17 @@ class _WalletPageState extends State<WalletPage> {
                     color: const Color(0xFFFF9800),
                   ),
                 ),
-                if (_walletManager.isFundingAvailable) ...[
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildActionButton(
-                      icon: Icons.account_balance_wallet_rounded,
-                      label: 'Faucet',
-                      onTap: _requestFunding,
-                      color: const Color(0xFF9C27B0),
-                    ),
-                  ),
-                ],
+                // if (_walletManager.isFundingAvailable) ...[
+                //   const SizedBox(width: 12),
+                //   Expanded(
+                //     child: _buildActionButton(
+                //       icon: Icons.account_balance_wallet_rounded,
+                //       label: 'Faucet',
+                //       onTap: _requestFunding,
+                //       color: const Color(0xFF9C27B0),
+                //     ),
+                //   ),
+                // ],
               ],
             ),
             

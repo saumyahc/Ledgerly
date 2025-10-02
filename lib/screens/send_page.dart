@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:web3dart/crypto.dart';
-import 'dart:io' show Platform;
 import 'dart:convert';
 import '../theme.dart';
 import '../services/wallet_manager.dart';
 import '../constants.dart';
-import 'package:web3dart/web3dart.dart';
 import 'package:http/http.dart' as http;
 
 class SendPage extends StatefulWidget {
@@ -39,33 +36,19 @@ class _SendPageState extends State<SendPage> {
   bool _isValidAddress = false;
   bool _isValidAmount = false;
   
-  // Web3 client
-  late Web3Client _web3Client;
-  
   @override
   void initState() {
     super.initState();
-    _initializeWeb3();
     _initializeWallet();
-  }
-
-  void _initializeWeb3() {
-    // Use platform-appropriate localhost URL
-    String rpcUrl = ApiConstants.ganacheRpcUrl;
-    if (!const bool.fromEnvironment('dart.library.js_util') && Platform.isAndroid) {
-      rpcUrl = 'http://10.0.2.2:8545';
-    }
-    _web3Client = Web3Client(rpcUrl, http.Client());
   }
 
   Future<void> _initializeWallet() async {
     try {
-      print('🔧 Initializing wallet manager for user ${widget.userId}...');
+      print('Initializing wallet manager for user ${widget.userId}...');
       await _walletManager.initialize(
         userId: widget.userId,
-        networkMode: 'local', // Using local development network
       );
-      print('✅ Wallet manager initialized successfully');
+      print('Wallet manager initialized successfully');
       
       // Check if wallet exists
       final hasWallet = await _walletManager.hasWallet();
@@ -74,16 +57,12 @@ class _SendPageState extends State<SendPage> {
       if (hasWallet) {
         final address = await _walletManager.getWalletAddress();
         print('   Wallet address: $address');
-        
-        // Test credentials access
-        final credentials = await _walletManager.getCredentials();
-        print('   Credentials available: ${credentials != null}');
       } else {
-        print('❌ No wallet found for user ${widget.userId}');
+        print('No wallet found for user ${widget.userId}');
         print('   User needs to create or import a wallet first');
       }
     } catch (e) {
-      print('❌ Failed to initialize wallet: $e');
+      print('Failed to initialize wallet: $e');
     }
   }
 
@@ -92,7 +71,6 @@ class _SendPageState extends State<SendPage> {
     _emailController.dispose();
     _addressController.dispose();
     _amountController.dispose();
-    _web3Client.dispose();
     super.dispose();
   }
 
@@ -162,71 +140,46 @@ class _SendPageState extends State<SendPage> {
   Future<void> _sendToEmail() async {
     final email = _emailController.text.trim();
     final amount = double.parse(_amountController.text);
-    
-    print('🚀 Starting sendToEmail function...');
+
+    print('Starting sendToEmail function...');
     print('   Email: $email');
     print('   Amount: $amount ETH');
-    
+
     try {
       // Step 1: Check if email is registered via backend API and get recipient wallet
-      print('🔍 Step 1: Checking if email is registered via backend...');
+      print('Step 1: Checking if email is registered via backend...');
       final emailCheckResponse = await _checkEmailRegistration(email);
       if (!emailCheckResponse['success']) {
-        print('❌ FAILURE: ${emailCheckResponse['message']}');
+        print('FAILURE: ${emailCheckResponse['message']}');
         throw Exception(emailCheckResponse['message']);
       }
       final recipientWallet = emailCheckResponse['user']['wallet_address'];
-      print('✅ Email is registered with wallet: $recipientWallet');
-      
-      // Step 2: Get wallet credentials for sender
-      print('🔑 Step 2: Getting sender wallet credentials...');
-      
-      // First check if wallet exists
-      final hasWallet = await _walletManager.hasWallet();
-      print('   Wallet exists: $hasWallet');
-      
-      if (!hasWallet) {
-        print('❌ FAILURE: No wallet found for user ${widget.userId}');
-        throw Exception('No wallet found for this user. Please create or import a wallet first from the wallet page.');
-      }
-      
-      final credentials = await _walletManager.getCredentials();
-      if (credentials == null) {
-        print('❌ FAILURE: Sender wallet credentials not available');
-        print('   Wallet exists but credentials are null - possible initialization issue');
-        throw Exception('Wallet credentials not available. Try refreshing or re-initializing the wallet.');
-      }
-      print('✅ Sender wallet credentials obtained');
-      
-      // Step 3: Send direct ETH transfer to recipient wallet
-      print('💰 Step 3: Sending ETH transfer to recipient wallet...');
-      final amountString = amount.toStringAsFixed(18);
-      final amountInWei = BigInt.parse((double.parse(amountString) * 1e18).toStringAsFixed(0));
-      print('   Amount in wei: $amountInWei');
-      print('   Recipient address: $recipientWallet');
-      
-      final transaction = Transaction(
-        to: EthereumAddress.fromHex(recipientWallet),
-        value: EtherAmount.inWei(amountInWei),
-        gasPrice: EtherAmount.inWei(BigInt.from(20000000000)), // 20 Gwei
-        maxGas: 21000, // Standard gas limit for ETH transfer
+      print('Email is registered with wallet: $recipientWallet');
+
+      // Step 2: Send payment via backend
+      print('Step 2: Sending payment via backend...');
+      final uri = Uri.parse('${ApiConstants.middlewareBaseUrl}/payment/email-to-email');
+      final response = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'fromEmail': widget.userEmail,
+          'toEmail': email,
+          'amountEth': amount,
+          'memo': '', // Add memo if needed
+        }),
       );
-      print('✅ Transaction built successfully');
-      
-      print('📤 Step 4: Sending transaction to blockchain...');
-      final txHash = await _web3Client.sendTransaction(
-        credentials,
-        transaction,
-        chainId: 1377, // Explicit Ganache chain ID
-      );
-      
-      print('🎉 SUCCESS: ETH transfer sent successfully!');
-      print('   Transaction hash: $txHash');
-      
+      final responseData = json.decode(response.body);
+      print('   API response: ${response.statusCode} - ${response.body}');
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        print('SUCCESS: Payment sent! TX: ${responseData['txHash']}');
+      } else {
+        throw Exception(responseData['error'] ?? 'Failed to send payment');
+      }
     } catch (e, stackTrace) {
-      print('❌ CRITICAL FAILURE in _sendToEmail function: $e');
-      print('📍 Stack trace: $stackTrace');
-      rethrow; // Re-throw to maintain original error handling
+      print('CRITICAL FAILURE in _sendToEmail function: $e');
+      print('Stack trace: $stackTrace');
+      rethrow;
     }
   }
 
@@ -260,63 +213,41 @@ class _SendPageState extends State<SendPage> {
   Future<void> _sendToAddress() async {
     final address = _addressController.text.trim();
     final amount = double.parse(_amountController.text);
-    
-    print('🚀 Starting sendToAddress function...');
+
+    print('Starting sendToAddress function...');
     print('   Address: $address');
     print('   Amount: $amount ETH');
-    
+
     try {
-      // Get wallet credentials
-      print('🔑 Step 1: Getting wallet credentials...');
-      
-      // First check if wallet manager is initialized
-      final hasWallet = await _walletManager.hasWallet();
-      print('   Wallet exists: $hasWallet');
-      
-      if (!hasWallet) {
-        print('❌ FAILURE: No wallet found for user ${widget.userId}');
-        throw Exception('No wallet found for this user. Please create or import a wallet first.');
+      // Step 1: Validate address via backend
+      final validateUri = Uri.parse('${ApiConstants.middlewareBaseUrl}/wallet/validate/$address');
+      final validateResponse = await http.get(validateUri);
+      final validateData = json.decode(validateResponse.body);
+      if (validateData['success'] != true || validateData['isValid'] != true) {
+        throw Exception('Invalid wallet address');
       }
-      
-      final credentials = await _walletManager.getCredentials();
-      if (credentials == null) {
-        print('❌ FAILURE: Wallet credentials not available');
-        print('   This could mean the wallet is not properly initialized or private key is missing');
-        throw Exception('Wallet credentials not available. Please check wallet setup.');
+
+      // Step 2: Send payment via backend
+      final uri = Uri.parse('${ApiConstants.middlewareBaseUrl}/payment/send');
+      final response = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'toWallet': address,
+          'amountEth': amount,
+        }),
+      );
+      final responseData = json.decode(response.body);
+      print('   API response: ${response.statusCode} - ${response.body}');
+      if (response.statusCode == 200 && responseData['txHash'] != null) {
+        print('SUCCESS: Payment sent! TX: ${responseData['txHash']}');
+      } else {
+        throw Exception(responseData['error'] ?? 'Failed to send payment');
       }
-      print('✅ Wallet credentials obtained');
-      
-      // Convert double amount to wei (BigInt) properly
-      print('🔧 Step 2: Converting amount to wei...');
-      final amountString = amount.toStringAsFixed(18); // Ensure 18 decimal places
-      final amountInWei = BigInt.parse((double.parse(amountString) * 1e18).toStringAsFixed(0));
-      print('   Amount in wei: $amountInWei');
-      
-      // Build transaction manually to avoid eth_call issues
-      print('📝 Step 3: Building ETH transfer transaction...');
-      final transaction = Transaction(
-        to: EthereumAddress.fromHex(address),
-        value: EtherAmount.inWei(amountInWei),
-        gasPrice: EtherAmount.inWei(BigInt.from(20000000000)), // 20 Gwei
-        maxGas: 21000, // Standard gas limit for ETH transfer
-      );
-      print('✅ Transaction built successfully');
-      
-      // Send direct ETH transaction
-      print('📤 Step 4: Sending transaction to blockchain...');
-      final txHash = await _web3Client.sendTransaction(
-        credentials,
-        transaction,
-        chainId: 1377, // Explicit Ganache chain ID
-      );
-      
-      print('🎉 SUCCESS: ETH transfer sent successfully!');
-      print('   Transaction hash: $txHash');
-      
     } catch (e, stackTrace) {
-      print('❌ CRITICAL FAILURE in _sendToAddress function: $e');
-      print('📍 Stack trace: $stackTrace');
-      rethrow; // Re-throw to maintain original error handling
+      print('CRITICAL FAILURE in _sendToAddress function: $e');
+      print('Stack trace: $stackTrace');
+      rethrow;
     }
   }
 

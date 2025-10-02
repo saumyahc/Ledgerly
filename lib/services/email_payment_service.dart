@@ -35,7 +35,7 @@ class EmailPaymentService {
     }
   }
   
-  /// Send payment via email
+  /// Send payment via email using Node.js middleware
   static Future<Map<String, dynamic>> sendPaymentToEmail({
     required String fromEmail,
     required String toEmail,
@@ -44,29 +44,30 @@ class EmailPaymentService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse(ApiConstants.emailPayment),
+        Uri.parse('${ApiConstants.middlewareBaseUrl}/payment/email-to-email'),
         headers: {
           'Content-Type': 'application/json',
         },
         body: json.encode({
-          'from_email': fromEmail,
-          'to_email': toEmail,
-          'amount': amount,
+          'fromEmail': fromEmail,
+          'toEmail': toEmail,
+          'amountEth': amount.toString(),
           'memo': memo ?? '',
         }),
       );
 
       final responseData = json.decode(response.body);
-      
+
       if (response.statusCode == 200 && responseData['success'] == true) {
         return {
           'success': true,
-          'transaction': responseData['transaction'],
+          'txHash': responseData['txHash'],
+          'status': responseData['status'],
         };
       } else {
         return {
           'success': false,
-          'error': responseData['message'] ?? 'Failed to process payment',
+          'error': responseData['error'] ?? 'Failed to process payment',
         };
       }
     } catch (e) {
