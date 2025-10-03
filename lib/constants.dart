@@ -6,7 +6,7 @@ class ApiConstants {
   /// PHP backend (user/profile, legacy APIs)
   static const String phpBaseUrl = 'https://ledgerly.hivizstudios.com/backend_example';
   /// Middleware endpoint (local/testnet blockchain node)
-  static final String middlewareBaseUrl= dotenv.env['MIDDLEWARE_URL'] ?? 'http://127.0.0.1:3001'; // Change as needed for deployment
+  static final String middlewareBaseUrl= dotenv.env['MIDDLEWARE_URL'] ?? 'http://10.0.2.2:3001'; // Change as needed for deployment
   /// Node.js blockchain API server (funding, ganache control, etc)
 
   // === PHP Backend Endpoints ===

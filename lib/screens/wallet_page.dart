@@ -104,9 +104,14 @@ class _WalletPageState extends State<WalletPage> {
 
     try {
       final walletData = await _walletManager.createWallet();
+      print('Create Wallet Response: $walletData');
       final address = walletData['address'];
       final privateKey = walletData['privateKey'];
+
+      print('Linking wallet to backend for address: $address');
       await _linkWalletToBackend(address);
+      print('Finished linking wallet to backend.');
+
       await _loadWalletData();
       _showWalletCreatedSuccess(address, privateKey ?? '');
     } catch (e) {
@@ -160,13 +165,15 @@ class _WalletPageState extends State<WalletPage> {
   }
 
   Future<void> _linkWalletToBackend(String address) async {
+    print('[_linkWalletToBackend] Called with address: $address');
     try {
       await WalletApiService.linkWalletToUser(
         userId: widget.userId,
         walletAddress: address,
       );
+      print('[_linkWalletToBackend] Success for address: $address');
     } catch (e) {
-      print('Warning: Failed to link wallet to backend: $e');
+      print('[_linkWalletToBackend] Warning: Failed to link wallet to backend: $e');
       // Don't throw - wallet creation should still work
     }
   }
@@ -867,7 +874,7 @@ class _WalletPageState extends State<WalletPage> {
             child: ElevatedButton.icon(
               onPressed: _createWallet,
               icon: const Icon(Icons.add_circle_outline),
-              label: const Text('Create New Wallet'),
+              label: const Text('Create a Wallet'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
