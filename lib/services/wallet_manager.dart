@@ -9,11 +9,15 @@ class WalletManager {
   String get backendBaseUrl => ApiConstants.middlewareBaseUrl;
 
   /// Create a new wallet via backend
-  Future<Map<String, dynamic>> createWallet() async {
+  Future<Map<String, dynamic>> createWallet(int userId) async {
     print('[WalletManager] Sending wallet create request...');
     final response = await http.post(
       Uri.parse('$backendBaseUrl/wallet/create'),
       headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        "userId": userId,
+      }),
+
     );
     print('[WalletManager] Received response: ${response.body}');
     final data = jsonDecode(response.body);
@@ -26,28 +30,6 @@ class WalletManager {
     } else {
       print('[WalletManager] Wallet creation failed: ${data['error']}');
       throw Exception(data['error'] ?? 'Failed to create wallet');
-    }
-  }
-
-  /// Import wallet from private key via backend
-  Future<Map<String, dynamic>> importWallet(String privateKey) async {
-    print('[WalletManager] Sending wallet import request...');
-    final response = await http.post(
-      Uri.parse('$backendBaseUrl/wallet/import'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'privateKey': privateKey}),
-    );
-    print('[WalletManager] Received response: ${response.body}');
-    final data = jsonDecode(response.body);
-    if (data['success'] == true) {
-      print('[WalletManager] Writing imported privateKey and address to secure storage...');
-      await _storage.write(key: 'wallet_private_key', value: privateKey);
-      await _storage.write(key: 'wallet_address', value: data['address']);
-      print('[WalletManager] Wallet imported: address=${data['address']}');
-      return data;
-    } else {
-      print('[WalletManager] Wallet import failed: ${data['error']}');
-      throw Exception(data['error'] ?? 'Failed to import wallet');
     }
   }
 
@@ -70,22 +52,47 @@ class WalletManager {
     return {'privateKey': privateKey, 'address': address};
   }
 
-  /// Get wallet balance via backend
+  /// Get wallet balance via backend - Updated to match your Node.js middleware
   Future<double> getBalance() async {
     final address = await _storage.read(key: 'wallet_address');
     print('[WalletManager] Getting balance for address: $address');
     if (address == null) throw Exception('No wallet found');
+    
     final response = await http.get(
       Uri.parse('$backendBaseUrl/wallet/balance/$address'),
+      headers: {'Content-Type': 'application/json'},
     );
     print('[WalletManager] Received response: ${response.body}');
     final data = jsonDecode(response.body);
+    
     if (data['success'] == true) {
       print('[WalletManager] Balance: ${data['balance']}');
       return double.parse(data['balance'].toString());
     } else {
       print('[WalletManager] Failed to get balance: ${data['error']}');
       throw Exception(data['error'] ?? 'Failed to get balance');
+    }
+  }
+
+  /// Check if wallet is eligible for bonus - New method based on your API
+  Future<bool> isBonusEligible() async {
+    final address = await _storage.read(key: 'wallet_address');
+    print('[WalletManager] Checking bonus eligibility for address: $address');
+    if (address == null) throw Exception('No wallet found');
+    
+    final response = await http.get(
+      Uri.parse('$backendBaseUrl/wallet/bonus-eligible/$address'),
+      headers: {'Content-Type': 'application/json'},
+    );
+    print('[WalletManager] Received response: ${response.body}');
+    final data = jsonDecode(response.body);
+    
+    if (data['success'] == true) {
+      print('[WalletManager] Bonus eligible: ${data['eligible']}');
+      return data['eligible'] == true;
+    } else {
+      print('[WalletManager] Failed to check bonus eligibility: ${data['error']}');
+      return false;
     }
   }
 
@@ -116,7 +123,7 @@ class WalletManager {
     }
   }
 
-  /// Send payment by email via backend
+  /// Send payment by email via backend - Updated to match your Node.js middleware
   Future<String> sendPaymentByEmail({
     required String fromEmail,
     required String toEmail,
@@ -131,12 +138,13 @@ class WalletManager {
         'fromEmail': fromEmail,
         'toEmail': toEmail,
         'amountEth': amount,
-        'memo': memo,
+        'memo': memo ?? '',
       }),
     );
     print('[WalletManager] Received response: ${response.body}');
     final data = jsonDecode(response.body);
-    if (data['txHash'] != null) {
+    
+    if (data['success'] == true && data['txHash'] != null) {
       print('[WalletManager] Email payment sent: txHash=${data['txHash']}');
       return data['txHash'];
     } else {
@@ -145,11 +153,12 @@ class WalletManager {
     }
   }
 
-  /// Request faucet funding via backend
+  /// Request faucet funding via backend - Updated to match your Node.js middleware
   Future<Map<String, dynamic>> requestFunding(double amount) async {
     final address = await _storage.read(key: 'wallet_address');
     print('[WalletManager] Requesting faucet funding for $amount ETH to address: $address');
     if (address == null) throw Exception('No wallet found');
+    
     final response = await http.post(
       Uri.parse('$backendBaseUrl/payment/faucet'),
       headers: {'Content-Type': 'application/json'},
@@ -160,7 +169,35 @@ class WalletManager {
     );
     print('[WalletManager] Received response: ${response.body}');
     final data = jsonDecode(response.body);
+    
+    if (data['success'] == true) {
+      print('[WalletManager] Faucet funding successful: txHash=${data['txHash']}');
+    } else {
+      print('[WalletManager] Faucet funding failed: ${data['error']}');
+    }
+    
     return data;
+  }
+
+  /// Check if funding is available - New method for your use case
+  Future<bool> isFundingAvailable() async {
+    try {
+      // Check if the user is eligible for bonus funding
+      final bonusEligible = await isBonusEligible();
+      
+      // Also check current balance to see if they need funding
+      final balance = await getBalance();
+      
+      // Allow funding if they're bonus eligible or have low balance (< 0.1 ETH)
+      final needsFunding = balance < 0.1;
+      
+      print('[WalletManager] Funding available: bonusEligible=$bonusEligible, needsFunding=$needsFunding');
+      return bonusEligible || needsFunding;
+      
+    } catch (e) {
+      print('[WalletManager] Error checking funding availability: $e');
+      return false;
+    }
   }
 
   /// Clear wallet (logout)

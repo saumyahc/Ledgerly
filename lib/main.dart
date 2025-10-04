@@ -61,7 +61,6 @@ class LedgerlyApp extends StatelessWidget {
             return MaterialPageRoute(
               builder: (context) => WalletPage(
                 userId: args?['userId'] ?? 0,
-                userName: args?['userName'] ?? '',
                 userEmail: args?['userEmail'] ?? '',
               ),
             );

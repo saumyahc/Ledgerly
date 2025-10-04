@@ -60,7 +60,7 @@ class _MainNavigationState extends State<MainNavigation> {
       StockInfoPage(),
       WalletPage(
         userId: widget.userId,
-        userName: widget.userName,
+        
         userEmail: widget.userEmail,
       ),
       HistoryPage(

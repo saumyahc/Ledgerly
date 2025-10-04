@@ -8,13 +8,11 @@ import 'send_page.dart';
 
 class WalletPage extends StatefulWidget {
   final int userId;
-  final String userName;
   final String userEmail;
 
   const WalletPage({
     super.key,
     required this.userId,
-    required this.userName,
     required this.userEmail,
   });
 
@@ -31,6 +29,7 @@ class _WalletPageState extends State<WalletPage> {
   bool _hasWallet = false;
   List<Map<String, dynamic>> _transactions = [];
   bool _isLoadingTransactions = false;
+  bool _isBonusEligible = false;
 
   @override
   void initState() {
@@ -38,72 +37,107 @@ class _WalletPageState extends State<WalletPage> {
     _initializeWallet();
   }
 
+  @override
+  void dispose() {
+    // Cancel any ongoing operations
+    super.dispose();
+  }
+
   Future<void> _initializeWallet() async {
+    if (!mounted) return; // Add mounted check
     setState(() => _isLoading = true);
     
     try {
       await _walletManager.initialize(userId: widget.userId);
       final hasWallet = await _walletManager.hasWallet();
       
-      if (hasWallet) {
+      if (hasWallet && mounted) { // Add mounted check
         await _loadWalletData();
       } else {
-        setState(() => _hasWallet = false);
+        if (mounted) setState(() => _hasWallet = false); // Add mounted check
       }
     } catch (e) {
-      _showError('Failed to initialize wallet: $e');
+      if (mounted) _showError('Failed to initialize wallet: $e'); // Add mounted check
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false); // Add mounted check
     }
   }
 
   Future<void> _loadWalletData() async {
+    if (!mounted) return; // Add mounted check
+    
     try {
       final address = await _walletManager.getWalletAddress();
       final balance = await _walletManager.getBalance();
       
-      setState(() {
-        _walletAddress = address;
-        _balance = balance;
-        _hasWallet = address != null;
-      });
+      if (mounted) { // Add mounted check
+        setState(() {
+          _walletAddress = address;
+          _balance = balance;
+          _hasWallet = address != null;
+        });
+      }
       
-      // Load transactions
+      // Load transactions and bonus data
       await _loadTransactions();
+      await _loadBonusData();
     } catch (e) {
-      _showError('Failed to load wallet data: $e');
+      if (mounted) _showError('Failed to load wallet data: $e'); // Add mounted check
+    }
+  }
+
+  Future<void> _loadBonusData() async {
+    if (!mounted) return; // Add mounted check
+    
+    try {
+      final isEligible = await _walletManager.isBonusEligible();
+      if (mounted) { // Add mounted check
+        setState(() {
+          _isBonusEligible = isEligible;
+        });
+      }
+      print('🎁 Bonus eligibility loaded: $_isBonusEligible');
+    } catch (e) {
+      print('❌ Failed to load bonus data: $e');
+      if (mounted) { // Add mounted check
+        setState(() {
+          _isBonusEligible = false;
+        });
+      }
     }
   }
 
   Future<void> _loadTransactions() async {
-    if (_walletAddress == null) return;
+    if (_walletAddress == null || !mounted) return; // Add mounted check
     
-    setState(() => _isLoadingTransactions = true);
+    if (mounted) setState(() => _isLoadingTransactions = true); // Add mounted check
     
     try {
       final response = await TransactionService.getTransactionHistory(
         userId: widget.userId,
-        limit: 10, // Load latest 10 transactions
+        limit: 10,
       );
       
       final transactions = List<Map<String, dynamic>>.from(response['transactions'] ?? []);
       
-      setState(() {
-        _transactions = transactions;
-      });
+      if (mounted) { // Add mounted check
+        setState(() {
+          _transactions = transactions;
+        });
+      }
     } catch (e) {
       print('Failed to load transactions: $e');
-      // Don't show error for transactions as it's not critical
     } finally {
-      setState(() => _isLoadingTransactions = false);
+      if (mounted) setState(() => _isLoadingTransactions = false); // Add mounted check
     }
   }
 
   Future<void> _createWallet() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
 
     try {
-      final walletData = await _walletManager.createWallet();
+      final walletData = await _walletManager.createWallet(widget.userId);
       print('Create Wallet Response: $walletData');
       final address = walletData['address'];
       final privateKey = walletData['privateKey'];
@@ -113,56 +147,16 @@ class _WalletPageState extends State<WalletPage> {
       print('Finished linking wallet to backend.');
 
       await _loadWalletData();
-      _showWalletCreatedSuccess(address, privateKey ?? '');
+      if (mounted) _showWalletCreatedSuccess(address, privateKey ?? '');
     } catch (e) {
       await _walletManager.clearWallet();
-      _showError('Failed to create wallet: $e');
+      if (mounted) _showError('Failed to create wallet: $e');
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _importWallet() async {
-    final controller = TextEditingController();
-    final privateKey = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Import from Private Key'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'Private Key',
-            hintText: 'Enter your private key',
-          ),
-          obscureText: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, controller.text),
-            child: const Text('Import'),
-          ),
-        ],
-      ),
-    );
-    if (privateKey == null || privateKey.isEmpty) return;
-    setState(() => _isLoading = true);
-    try {
-      final walletData = await _walletManager.importWallet(privateKey);
-      final address = walletData['address'];
-      await _linkWalletToBackend(address);
-      await _loadWalletData();
-      _showSuccess('Wallet imported successfully!');
-    } catch (e) {
-      await _walletManager.clearWallet();
-      _showError('Failed to import wallet: $e');
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
+
 
   Future<void> _linkWalletToBackend(String address) async {
     print('[_linkWalletToBackend] Called with address: $address');
@@ -179,25 +173,28 @@ class _WalletPageState extends State<WalletPage> {
   }
 
   Future<void> _refreshBalance() async {
+    if (!mounted) return; // Add mounted check
     setState(() => _isLoading = true);
     
     try {
       await _loadWalletData();
     } catch (e) {
-      _showError('Failed to refresh balance: $e');
+      if (mounted) _showError('Failed to refresh balance: $e'); // Add mounted check
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false); // Add mounted check
     }
   }
 
   Future<void> _requestFunding() async {
+    if (!mounted) return; // Add mounted check
+    
     // Show amount selection dialog
     final amount = await showDialog<double>(
       context: context,
       builder: (context) => _buildFundingDialog(),
     );
 
-    if (amount == null) return;
+    if (amount == null || !mounted) return; // Add mounted check
 
     setState(() => _isLoading = true);
 
@@ -208,65 +205,36 @@ class _WalletPageState extends State<WalletPage> {
       
       if (result['success'] == true) {
         await _loadWalletData(); // Refresh balance
-        _showSuccess('Successfully received ${amount} ETH!\nTx: ${result['transactionHash']?.substring(0, 10)}...');
+        if (mounted) { // Add mounted check
+          _showSuccess('Successfully received ${amount} ETH!\nTx: ${result['transactionHash']?.substring(0, 10)}...');
+        }
       } else {
-        _showError('Funding failed: ${result['error']}');
+        if (mounted) _showError('Funding failed: ${result['error']}'); // Add mounted check
       }
     } catch (e) {
-      _showError('Failed to request funding: $e');
+      if (mounted) _showError('Failed to request funding: $e'); // Add mounted check
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false); // Add mounted check
     }
   }
 
-  Widget _buildFundingDialog() {
-    return AlertDialog(
-      title: const Text('🏦 Request Test ETH'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('Select amount of test ETH to receive:'),
-          const SizedBox(height: 16),
-          Text(
-            '💡 Available in local development mode only',
-            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(context, 0.5),
-          child: const Text('0.5 ETH'),
-        ),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(context, 1.0),
-          child: const Text('1 ETH'),
-        ),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(context, 5.0),
-          child: const Text('5 ETH'),
-        ),
-      ],
-    );
-  }
-
   void _showSuccess(String message) {
+    if (!mounted) return; // Add mounted check
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), backgroundColor: Colors.green),
     );
   }
 
   void _showError(String message) {
+    if (!mounted) return; // Add mounted check
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), backgroundColor: Colors.red),
     );
   }
 
   void _showWalletCreatedSuccess(String address, String mnemonic) {
+    if (!mounted) return; // Add mounted check
+    
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -320,14 +288,14 @@ class _WalletPageState extends State<WalletPage> {
             TextButton(
               onPressed: () {
                 Clipboard.setData(ClipboardData(text: mnemonic));
-                _showSuccess('Seed phrase copied to clipboard');
+                if (mounted) _showSuccess('Seed phrase copied to clipboard'); // Add mounted check
               },
               child: const Text('Copy Seed Phrase'),
             ),
             ElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                _showSuccess('Wallet created successfully!');
+                if (mounted) _showSuccess('Wallet created successfully!'); // Add mounted check
               },
               child: const Text('I\'ve Saved It'),
             ),
@@ -338,10 +306,44 @@ class _WalletPageState extends State<WalletPage> {
   }
 
   void _copyAddress() {
-    if (_walletAddress != null) {
+    if (_walletAddress != null && mounted) { // Add mounted check
       Clipboard.setData(ClipboardData(text: _walletAddress!));
       _showSuccess('Address copied to clipboard');
     }
+  }
+
+  Widget _buildFundingDialog() {
+    return AlertDialog(
+      title: const Text('Request Funding'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('Select the amount of ETH to request:'),
+          const SizedBox(height: 16),
+          ListTile(
+            title: const Text('0.1 ETH'),
+            subtitle: const Text('Small amount for testing'),
+            onTap: () => Navigator.pop(context, 0.1),
+          ),
+          ListTile(
+            title: const Text('0.5 ETH'),
+            subtitle: const Text('Medium amount'),
+            onTap: () => Navigator.pop(context, 0.5),
+          ),
+          ListTile(
+            title: const Text('1.0 ETH'),
+            subtitle: const Text('Large amount'),
+            onTap: () => Navigator.pop(context, 1.0),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+      ],
+    );
   }
 
   @override
@@ -491,17 +493,18 @@ class _WalletPageState extends State<WalletPage> {
                     color: const Color(0xFFFF9800),
                   ),
                 ),
-                // if (_walletManager.isFundingAvailable) ...[
-                //   const SizedBox(width: 12),
-                //   Expanded(
-                //     child: _buildActionButton(
-                //       icon: Icons.account_balance_wallet_rounded,
-                //       label: 'Faucet',
-                //       onTap: _requestFunding,
-                //       color: const Color(0xFF9C27B0),
-                //     ),
-                //   ),
-                // ],
+                // Show faucet button if user is bonus eligible
+                if (_isBonusEligible) ...[
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildActionButton(
+                      icon: Icons.account_balance_wallet_rounded,
+                      label: 'Faucet',
+                      onTap: _requestFunding,
+                      color: const Color(0xFF9C27B0),
+                    ),
+                  ),
+                ],
               ],
             ),
             
@@ -754,6 +757,8 @@ class _WalletPageState extends State<WalletPage> {
   }
 
   void _showSendDialog() async {
+    if (!mounted) return; // Add mounted check
+    
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -766,12 +771,14 @@ class _WalletPageState extends State<WalletPage> {
     );
     
     // If payment was successful, refresh wallet data
-    if (result == true) {
+    if (result == true && mounted) { // Add mounted check
       _loadWalletData();
     }
   }
 
   void _showReceiveDialog() {
+    if (!mounted) return; // Add mounted check
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -829,6 +836,8 @@ class _WalletPageState extends State<WalletPage> {
   }
 
   void _showSwapDialog() {
+    if (!mounted) return; // Add mounted check
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -886,18 +895,7 @@ class _WalletPageState extends State<WalletPage> {
           const SizedBox(height: 16),
           
           // Import Wallet Button
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: _importWallet,
-              icon: const Icon(Icons.download),
-              label: const Text('Import Existing Wallet'),
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: AppColors.primary),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
-            ),
-          ),
+         
         ],
       ),
     );

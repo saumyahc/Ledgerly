@@ -14,7 +14,7 @@ class StockInfoPage extends StatefulWidget {
   State<StockInfoPage> createState() => _StockInfoPageState();
 }
 
-class _StockInfoPageState extends State<StockInfoPage> {
+class _StockInfoPageState extends State<StockInfoPage> with AutomaticKeepAliveClientMixin {
   // Start with empty list - all symbols will be loaded dynamically from API
   final List<_SymbolInfo> _symbols = const <_SymbolInfo>[];
 
@@ -77,7 +77,7 @@ class _StockInfoPageState extends State<StockInfoPage> {
 
   void _startAutoRefresh() {
     _refreshTimer = Timer.periodic(_autoRefreshInterval, (_) {
-      // Only refresh if app is active and symbols are visible
+      // Only refresh if app is active and widget is mounted
       if (mounted) {
         _refreshVisibleQuotes();
       }
@@ -86,16 +86,18 @@ class _StockInfoPageState extends State<StockInfoPage> {
 
   Future<void> _refreshAll() async {
     try {
+      if (!mounted) return; // Add this check
       setState(() {
         _error = null;
-        if (_isInitialLoading) _isInitialLoading = true; // Keep loading state
+        if (_isInitialLoading) _isInitialLoading = true;
       });
       await _refreshVisibleQuotes();
-      if (mounted) setState(() {
+      if (mounted) setState(() { // Already have this check - good!
         _isInitialLoading = false;
         _lastUpdated = DateTime.now();
       });
     } catch (e) {
+      if (!mounted) return; // Add this check
       setState(() {
         _error = 'Failed to refresh quotes: $e';
         _isInitialLoading = false;
@@ -126,6 +128,8 @@ class _StockInfoPageState extends State<StockInfoPage> {
   Future<void> _fetchQuotesBatch(List<String> symbols) async {
     // Process symbols in batches to control concurrent requests
     for (int i = 0; i < symbols.length; i += _maxConcurrentRequests) {
+      if (!mounted) return; // Add this check
+      
       final int end = (i + _maxConcurrentRequests).clamp(0, symbols.length);
       final List<String> batch = symbols.sublist(i, end);
       
@@ -147,11 +151,11 @@ class _StockInfoPageState extends State<StockInfoPage> {
       }
     }
     
-    if (mounted) setState(() {});
+    if (mounted) setState(() {}); // Already have this check - good!
   }
 
   Future<void> _loadMoreSymbols() async {
-    if (_isLoadingMore) return;
+    if (_isLoadingMore || !mounted) return; // Add mounted check
     _isLoadingMore = true;
     try {
       // Check cache first
@@ -172,7 +176,7 @@ class _StockInfoPageState extends State<StockInfoPage> {
         symbols = await _fetchSymbolsFromExchange(_exchange, _page);
       }
       
-      if (symbols.isNotEmpty) {
+      if (symbols.isNotEmpty && mounted) { // Add mounted check
         setState(() => _dynamicSymbols.addAll(symbols));
         _page++;
         
@@ -181,7 +185,9 @@ class _StockInfoPageState extends State<StockInfoPage> {
         await _fetchQuotesBatch(symbolsToFetch);
       }
     } catch (e) {
-      setState(() => _error = 'Failed to load symbols');
+      if (mounted) { // Add mounted check
+        setState(() => _error = 'Failed to load symbols');
+      }
     } finally {
       _isLoadingMore = false;
     }
@@ -328,7 +334,12 @@ class _StockInfoPageState extends State<StockInfoPage> {
   }
 
   @override
+  bool get wantKeepAlive => true; // Add this to keep the state alive when switching tabs
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context); // Add this line
+    
     final uri = FinnhubConstants.symbolsUrl(_exchange);
     print('Finnhub symbols URI: $uri');
     return Scaffold(
@@ -511,13 +522,15 @@ class _StockInfoPageState extends State<StockInfoPage> {
                   showCheckmark: false,
                   selected: selected,
                   onSelected: (_) {
-                    setState(() {
-                      _exchange = exchange;
-                      _page = 0;
-                      _dynamicSymbols.clear();
-                      _quotesBySymbol.clear();
-                    });
-                    _loadMoreSymbols();
+                    if (mounted) { // Add mounted check
+                      setState(() {
+                        _exchange = exchange;
+                        _page = 0;
+                        _dynamicSymbols.clear();
+                        _quotesBySymbol.clear();
+                      });
+                      _loadMoreSymbols();
+                    }
                   },
                   label: Text(exchange),
                   labelStyle: TextStyle(
@@ -545,9 +558,11 @@ class _StockInfoPageState extends State<StockInfoPage> {
       onChanged: (String value) {
         _debounce?.cancel();
         _debounce = Timer(const Duration(milliseconds: 250), () {
-          setState(() {
-            _query = value.trim();
-          });
+          if (mounted) { // Add mounted check
+            setState(() {
+              _query = value.trim();
+            });
+          }
         });
       },
       textInputAction: TextInputAction.search,
